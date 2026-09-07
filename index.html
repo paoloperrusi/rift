@@ -276,7 +276,7 @@ select.adj-inp{cursor:pointer;}
 
 .ftool{width:26px;height:26px;background:rgba(14,14,19,.9);border:1px solid var(--ln2);border-radius:var(--r);color:var(--t2);font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all var(--ease);backdrop-filter:blur(4px);}
 .ftool:hover{background:var(--bg4);color:var(--t1);border-color:var(--ln3);}
-.ftool.on{background:var(--dim);border-color:var(--acc);color:var(--acc2);}
+.ftool.on, .ftool.active-pan{background:var(--dim);border-color:var(--acc);color:var(--acc2);box-shadow:0 0 8px rgba(108,92,231,.35);}
 
 body.drag-over #cvs-area{outline:2px dashed var(--acc);outline-offset:-6px;}
 </style>
@@ -292,7 +292,23 @@ body.drag-over #cvs-area{outline:2px dashed var(--acc);outline-offset:-6px;}
   <div class="tb-sep"></div>
   <button class="btn sm" onclick="zoomFit()" title="Fit image to window">fit</button>
   <button class="btn sm" onclick="zoom100()" title="100% actual pixels">1:1</button>
-  <span id="zoom-display" style="font-family:var(--font-mono);font-size:10px;color:var(--t2);background:var(--bg3);border:1px solid var(--ln2);border-radius:var(--r);padding:0 8px;height:22px;display:flex;align-items:center;min-width:46px;justify-content:center;cursor:pointer;" onclick="promptZoom()" title="Click to enter zoom %">100%</span>
+  <div style="position:relative;display:inline-flex;">
+    <span id="zoom-display" style="font-family:var(--font-mono);font-size:10px;color:var(--t2);background:var(--bg3);border:1px solid var(--ln2);border-radius:var(--r);padding:0 8px;height:22px;display:flex;align-items:center;min-width:46px;justify-content:center;cursor:pointer;" onclick="toggleZoomPop(event)" title="Zoom presets & custom %">100%</span>
+    <div id="zoom-popover" style="display:none;position:absolute;top:28px;left:0;background:var(--bg2);border:1px solid var(--ln2);border-radius:var(--r);padding:6px;box-shadow:0 8px 24px rgba(0,0,0,.6);z-index:200;flex-direction:column;gap:5px;width:130px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:3px;">
+        <button class="btn sm ghost" onclick="setZoom(0.25);closeZoomPop();">25%</button>
+        <button class="btn sm ghost" onclick="setZoom(0.5);closeZoomPop();">50%</button>
+        <button class="btn sm ghost" onclick="setZoom(1);closeZoomPop();">100%</button>
+        <button class="btn sm ghost" onclick="setZoom(2);closeZoomPop();">200%</button>
+        <button class="btn sm ghost" onclick="setZoom(4);closeZoomPop();">400%</button>
+        <button class="btn sm ghost" onclick="zoomFit();closeZoomPop();">fit</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:3px;border-top:1px solid var(--ln2);padding-top:5px;">
+        <input type="number" id="zoom-custom-inp" min="5" max="4000" placeholder="%" style="width:100%;height:22px;background:var(--bg1);border:1px solid var(--ln2);border-radius:3px;color:var(--t0);font-family:var(--font-mono);font-size:10px;padding:0 4px;outline:none;" onkeydown="if(event.key==='Enter'){setCustomZoom(this.value);closeZoomPop();}">
+        <button class="btn sm acc" style="padding:0 6px;" onclick="setCustomZoom(document.getElementById('zoom-custom-inp').value);closeZoomPop();">✓</button>
+      </div>
+    </div>
+  </div>
   <div class="tb-sep"></div>
   <select class="res-sel" id="render-res" title="Export render resolution">
     <option value="1">1× export</option>
@@ -2444,10 +2460,31 @@ function zoomFit(){
   VP.zoom=Math.max(0.05,scale);posCanvas();
 }
 function zoom100(){VP.zoom=1;VP.panX=0;VP.panY=0;posCanvas();}
-function promptZoom(){
-  const v=prompt('Zoom % (1-4000):',Math.round(VP.zoom*100));
-  if(v===null)return;const n=parseFloat(v);if(isNaN(n))return;
-  VP.zoom=Math.max(0.05,Math.min(40,n/100));VP.panX=0;VP.panY=0;posCanvas();
+function toggleZoomPop(e){
+  if(e)e.stopPropagation();
+  const p=document.getElementById('zoom-popover');
+  if(!p)return;
+  const isVis=p.style.display==='flex';
+  p.style.display=isVis?'none':'flex';
+  if(!isVis){
+    const inp=document.getElementById('zoom-custom-inp');
+    if(inp){inp.value=Math.round(VP.zoom*100);setTimeout(()=>inp.focus(),50);}
+  }
+}
+function closeZoomPop(){
+  const p=document.getElementById('zoom-popover');
+  if(p)p.style.display='none';
+}
+function setZoom(z){
+  VP.zoom=Math.max(0.05,Math.min(40,z));
+  VP.panX=0;VP.panY=0;
+  posCanvas();
+}
+function setCustomZoom(val){
+  const n=parseFloat(val);
+  if(!isNaN(n)&&n>0){
+    setZoom(n/100);
+  }
 }
 
 // ─── CANVAS MOUSE ────────────────────────────────────────────
@@ -2455,7 +2492,7 @@ let _activeTool='select';
 function setFTool(t,el){
   if(_activeTool==='crop'&&t!=='crop'){applyCrop();}
   _activeTool=t;
-  document.querySelectorAll('.ftool').forEach(f=>f.classList.remove('on'));
+  document.querySelectorAll('.ftool').forEach(f=>{f.classList.remove('on');f.classList.remove('active-pan');});
   el.classList.add('on');
   const area=document.getElementById('cvs-area');
   area.style.cursor=t==='pan'?'grab':t==='crop'?'crosshair':'default';
@@ -2490,6 +2527,7 @@ function cvMDown(e){
     e.preventDefault();
     VP.panning=true;VP.px0=e.clientX;VP.py0=e.clientY;VP.ox=VP.panX;VP.oy=VP.panY;
     document.getElementById('cvs-area').style.cursor='grabbing';
+    document.getElementById('ftool-pan')?.classList.add('active-pan');
   } else if(_activeTool==='crop'&&ST.img){
     e.preventDefault();
     ST._cropDragging=true;
@@ -2544,7 +2582,13 @@ function cvMUp(e){
     const bar=document.getElementById('split-bar');
     if(bar)bar.classList.remove('dragging');
   }
-  if(VP.panning){VP.panning=false;document.getElementById('cvs-area').style.cursor=_activeTool==='pan'?'grab':ST._spacePanning?'grab':_activeTool==='crop'?'crosshair':'default';}
+  if(VP.panning){
+    VP.panning=false;
+    document.getElementById('cvs-area').style.cursor=_activeTool==='pan'?'grab':ST._spacePanning?'grab':_activeTool==='crop'?'crosshair':'default';
+    if(_activeTool!=='pan'&&!ST._spacePanning){
+      document.getElementById('ftool-pan')?.classList.remove('active-pan');
+    }
+  }
   if(ST._cropDragging){ST._cropDragging=false;updateCropPreview();}
   if(ST._xyDragging){
     ST._xyDragging=false;
@@ -3030,6 +3074,7 @@ window.addEventListener('keydown',e=>{
     if(!ST._spacePanning){
       ST._spacePanning=true;
       document.getElementById('cvs-area').style.cursor='grab';
+      document.getElementById('ftool-pan')?.classList.add('active-pan');
     }
   } else if(e.key.toLowerCase()==='z'){
     zoomFit();
@@ -3044,6 +3089,7 @@ window.addEventListener('keydown',e=>{
   } else if(e.key==='Escape'){
     if(ST._cropRect)adjCancelCrop();
     closeModal('modal-warn');closeModal('modal-fromscript');
+    closeZoomPop();
   }
 });
 
@@ -3051,6 +3097,9 @@ window.addEventListener('keyup',e=>{
   if(e.code==='Space'){
     ST._spacePanning=false;
     document.getElementById('cvs-area').style.cursor=_activeTool==='pan'?'grab':_activeTool==='crop'?'crosshair':'default';
+    if(_activeTool!=='pan'){
+      document.getElementById('ftool-pan')?.classList.remove('active-pan');
+    }
   }
 });
 window.addEventListener('mousemove',e=>{
@@ -3058,6 +3107,11 @@ window.addEventListener('mousemove',e=>{
 });
 window.addEventListener('mouseup',e=>{
   if(ST._splitDragging||ST._xyDragging||VP.panning||ST._cropDragging)cvMUp(e);
+});
+window.addEventListener('click',e=>{
+  if(!e.target.closest('#zoom-popover')&&!e.target.closest('#zoom-display')){
+    closeZoomPop();
+  }
 });
 window.addEventListener('dragstart',e=>{
   if(e.target&&e.target.closest&&e.target.closest('#cvs-area')){
