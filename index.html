@@ -2234,7 +2234,12 @@ function setSbTab(tab,el){ST.sbTab=tab;document.querySelectorAll('.sb-tab').forE
 function setRpTab(tab,el){
   ST.rpTab=tab;
   document.querySelectorAll('.rp-tab').forEach(t=>t.classList.remove('on'));
-  if(el) el.classList.add('on');
+  if(el){
+    el.classList.add('on');
+  } else {
+    const tabEl=document.querySelector(`.rp-tab[onclick*="'${tab}'"]`);
+    if(tabEl)tabEl.classList.add('on');
+  }
   document.getElementById('pane-params').style.display=tab==='params'?'flex':'none';
   const pa=document.getElementById('pane-adjust');if(pa)pa.style.display=tab==='adjust'?'flex':'none';
   document.getElementById('pane-mask').style.display=tab==='mask'?'flex':'none';
@@ -2505,13 +2510,25 @@ function setCustomZoom(val){
 // ─── CANVAS MOUSE ────────────────────────────────────────────
 let _activeTool='select';
 function setFTool(t,el){
-  if(_activeTool==='crop'&&t!=='crop'){applyCrop();}
+  if(_activeTool==='crop'&&t!=='crop'){
+    adjCancelCrop();
+  }
   _activeTool=t;
   document.querySelectorAll('.ftool').forEach(f=>{f.classList.remove('on');f.classList.remove('active-pan');});
-  el.classList.add('on');
+  if(el){
+    el.classList.add('on');
+  } else {
+    const toolEl=document.getElementById(t==='select'?'ftool-sel':t==='pan'?'ftool-pan':'ftool-crop');
+    if(toolEl)toolEl.classList.add('on');
+  }
   const area=document.getElementById('cvs-area');
   area.style.cursor=t==='pan'?'grab':t==='crop'?'crosshair':'default';
-  if(t!=='crop'){document.getElementById('crop-rect').style.display='none';ST._cropRect=null;}
+  if(t==='crop'){
+    setRpTab('adjust');
+  } else {
+    const cr=document.getElementById('crop-rect');if(cr)cr.style.display='none';
+    ST._cropRect=null;
+  }
   if(t!=='select'){hideXYHair();ST._xyDragging=false;}
 }
 function startSplitDrag(e){
@@ -3101,6 +3118,12 @@ window.addEventListener('keydown',e=>{
     e.preventDefault();exportImg();
   } else if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){
     e.preventDefault();applyEffect();
+  } else if(e.key.toLowerCase()==='v'){
+    setFTool('select');
+  } else if(e.key.toLowerCase()==='h'){
+    setFTool('pan');
+  } else if(e.key.toLowerCase()==='c'){
+    setFTool('crop');
   } else if(e.key==='Enter'){
     if(ST._cropRect&&ST._cropRect.w>0)adjCommitCrop();
   } else if(e.key==='Escape'){
