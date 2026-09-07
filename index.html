@@ -131,9 +131,26 @@ body{font-family:var(--font-ui);font-size:13px;display:flex;flex-direction:colum
 .pl{display:flex;justify-content:space-between;align-items:center;}
 .pl-name{font-family:var(--font-mono);font-size:10px;color:var(--t1);}
 .pl-val{font-family:var(--font-mono);font-size:10px;color:var(--acc2);background:var(--bg3);padding:1px 5px;border-radius:3px;min-width:32px;text-align:right;}
-input[type=range]{-webkit-appearance:none;width:100%;height:3px;border-radius:2px;outline:none;cursor:pointer;background:linear-gradient(to right,var(--acc) 0%,var(--acc) var(--v,50%),var(--bg4) var(--v,50%),var(--bg4) 100%);}
-input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:11px;height:11px;border-radius:50%;background:var(--acc2);border:2px solid var(--bg1);cursor:pointer;transition:background var(--ease);}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:18px;background:transparent;outline:none;cursor:pointer;margin:0;padding:0;}
+input[type=range]::-webkit-slider-runnable-track{width:100%;height:3px;border-radius:2px;background:linear-gradient(to right,var(--acc) 0%,var(--acc) var(--v,50%),var(--bg4) var(--v,50%),var(--bg4) 100%);border:none;}
+input[type=range]::-moz-range-track{width:100%;height:3px;border-radius:2px;background:linear-gradient(to right,var(--acc) 0%,var(--acc) var(--v,50%),var(--bg4) var(--v,50%),var(--bg4) 100%);border:none;}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:11px;height:11px;border-radius:50%;background:var(--acc2);border:2px solid var(--bg1);cursor:pointer;transition:background var(--ease);margin-top:-4px;}
 input[type=range]::-webkit-slider-thumb:hover{background:var(--acc3);}
+input[type=range]::-moz-range-thumb{width:11px;height:11px;border-radius:50%;background:var(--acc2);border:2px solid var(--bg1);cursor:pointer;border:none;}
+input[type=range]::-moz-range-thumb:hover{background:var(--acc3);}
+
+/* CUSTOM SLIDER WRAPPER */
+.slider-wrap{position:relative;height:18px;display:flex;align-items:center;cursor:pointer;user-select:none;}
+.slider-track-bg{position:relative;flex:1;height:3px;background:var(--bg4);border-radius:2px;pointer-events:none;}
+.slider-zero-mark{position:absolute;top:0;height:3px;width:1px;background:var(--t3);opacity:.5;pointer-events:none;}
+.slider-fill-bar{position:absolute;top:0;height:3px;border-radius:2px;pointer-events:none;}
+.slider-thumb-disc{position:absolute;width:11px;height:11px;border-radius:50%;background:var(--acc2);border:2px solid var(--bg1);pointer-events:none;top:50%;transform:translate(-50%,-50%);z-index:3;box-shadow:0 1px 3px rgba(0,0,0,0.4);transition:background var(--ease),transform 0.08s ease;}
+.slider-wrap:hover .slider-thumb-disc{background:var(--acc3);transform:translate(-50%,-50%) scale(1.2);}
+.slider-wrap input[type=range].slider-overlay{position:absolute;inset:0;width:100%;height:100%!important;opacity:0;cursor:pointer;z-index:5;margin:0;padding:0;background:transparent!important;border:none;outline:none;}
+.slider-wrap input[type=range].slider-overlay::-webkit-slider-runnable-track{height:100%;background:transparent!important;border:none;}
+.slider-wrap input[type=range].slider-overlay::-moz-range-track{height:100%;background:transparent!important;border:none;}
+.slider-wrap input[type=range].slider-overlay::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:16px;height:18px;background:transparent!important;border:none;cursor:pointer;margin:0;}
+.slider-wrap input[type=range].slider-overlay::-moz-range-thumb{width:16px;height:18px;background:transparent!important;border:none;cursor:pointer;}
 .p-hint{font-family:var(--font-mono);font-size:9px;color:var(--t3);line-height:1.5;}
 .p-actions{display:flex;gap:5px;margin-top:2px;}
 #ps-area{padding:10px 12px;border-top:1px solid var(--ln);flex-shrink:0;}
@@ -1708,15 +1725,15 @@ function renderParams(ef,key){
           <span class="pl-val" id="pv-${p.id}" onclick="editParamDirect('${p.id}')" title="Click to type exact value">${+v.toFixed(3)}</span>
         </div>
       </div>
-      <div style="position:relative;height:18px;display:flex;align-items:center">
-        <div style="position:relative;flex:1;height:3px;background:var(--bg4);border-radius:2px">
-          ${hasNeg?`<div style="position:absolute;top:0;height:3px;left:${zeroPct}%;width:1px;background:var(--t3);opacity:.5"></div>`:''}
-          <div style="position:absolute;top:0;height:3px;left:${fillLeft}%;width:${fillW}%;background:${fillColor};border-radius:2px;pointer-events:none"></div>
+      <div class="slider-wrap">
+        <div class="slider-track-bg">
+          ${hasNeg?`<div class="slider-zero-mark" style="left:${zeroPct}%"></div>`:''}
+          <div id="pfill-${p.id}" class="slider-fill-bar" style="left:${fillLeft}%;width:${fillW}%;background:${fillColor}"></div>
         </div>
         <input type="range" min="${p.min}" max="${p.max}" step="${p.step}" value="${v}"
-          style="position:absolute;inset:0;width:100%;opacity:0;cursor:pointer;z-index:2"
+          class="slider-overlay"
           oninput="upP('${p.id}',this)">
-        <div id="pthumb-${p.id}" style="position:absolute;width:11px;height:11px;border-radius:50%;background:var(--acc2);border:2px solid var(--bg1);pointer-events:none;top:50%;transform:translate(-50%,-50%);left:${pct}%;z-index:3"></div>
+        <div id="pthumb-${p.id}" class="slider-thumb-disc" style="left:${pct}%"></div>
       </div>
     </div>`;
   }
@@ -1740,8 +1757,30 @@ function renderParams(ef,key){
 function upP(id,el){
   const v=parseFloat(el.value); ST.activeParams[id]=v;
   const ve=document.getElementById('pv-'+id); if(ve) ve.textContent=+v.toFixed(3);
-  const pct=((v-parseFloat(el.min))/(parseFloat(el.max)-parseFloat(el.min))*100).toFixed(1);
+  const min=parseFloat(el.min), max=parseFloat(el.max), range=max-min;
+  const pctNum=((v-min)/range*100);
+  const pct=pctNum.toFixed(1);
   const th=document.getElementById('pthumb-'+id); if(th) th.style.left=pct+'%';
+  const fillEl=document.getElementById('pfill-'+id);
+  if(fillEl){
+    const hasNeg=min<0;
+    const zeroPct=hasNeg?((-min)/range*100):0;
+    if(hasNeg){
+      if(v<0){
+        fillEl.style.left=pct+'%';
+        fillEl.style.width=(zeroPct-pctNum).toFixed(1)+'%';
+        fillEl.style.background='var(--red)';
+      }else{
+        fillEl.style.left=zeroPct.toFixed(1)+'%';
+        fillEl.style.width=(pctNum-zeroPct).toFixed(1)+'%';
+        fillEl.style.background='var(--acc)';
+      }
+    }else{
+      fillEl.style.left='0';
+      fillEl.style.width=pct+'%';
+      fillEl.style.background='var(--acc)';
+    }
+  }
   if(GEN[ST.activeKey]) previewGen(); else if(ST.img) previewEff();
 }
 function editParamDirect(id){
@@ -2574,15 +2613,15 @@ function buildAdjSliders(){
           <span class="pl-name">${d.label}</span>
           <span class="pl-val" id="adj-val-${d.id}">${d.id==='gamma'?v.toFixed(2):v}</span>
         </div>
-        <div style="position:relative;height:18px;display:flex;align-items:center">
-          <div style="position:relative;flex:1;height:3px;background:var(--bg4);border-radius:2px">
-            ${hasNeg?`<div style="position:absolute;top:0;height:3px;left:${zeroPct}%;width:1px;background:var(--t3);opacity:.5"></div>`:''}
-            <div id="adj-fill-${d.id}" style="position:absolute;top:0;height:3px;left:${fillLeft}%;width:${fillW}%;background:${fillCol};border-radius:2px;pointer-events:none"></div>
+        <div class="slider-wrap">
+          <div class="slider-track-bg">
+            ${hasNeg?`<div class="slider-zero-mark" style="left:${zeroPct}%"></div>`:''}
+            <div id="adj-fill-${d.id}" class="slider-fill-bar" style="left:${fillLeft}%;width:${fillW}%;background:${fillCol}"></div>
           </div>
           <input type="range" min="${d.min}" max="${d.max}" step="${d.id==='gamma'?0.05:1}" value="${v}"
-            style="position:absolute;inset:0;width:100%;opacity:0;cursor:pointer;z-index:2"
+            class="slider-overlay"
             oninput="upAdj('${d.id}',this)">
-          <div id="adj-thumb-${d.id}" style="position:absolute;width:11px;height:11px;border-radius:50%;background:var(--acc2);border:2px solid var(--bg1);pointer-events:none;top:50%;transform:translate(-50%,-50%);left:${pct}%;z-index:3"></div>
+          <div id="adj-thumb-${d.id}" class="slider-thumb-disc" style="left:${pct}%"></div>
         </div>
       </div>`;
     });
@@ -2594,16 +2633,30 @@ function buildAdjSliders(){
 function upAdj(id,el){
   ADJ[id]=parseFloat(el.value);
   const def=ADJ_DEFS.find(d=>d.id===id);if(!def)return;
-  const v=ADJ[id];const range=def.max-def.min;const pct=((v-def.min)/range*100).toFixed(1);
+  const v=ADJ[id];const range=def.max-def.min;
+  const pctNum=((v-def.min)/range*100);
+  const pct=pctNum.toFixed(1);
   const th=document.getElementById('adj-thumb-'+id);if(th)th.style.left=pct+'%';
   const vl=document.getElementById('adj-val-'+id);if(vl)vl.textContent=id==='gamma'?v.toFixed(2):v;
   const fillEl=document.getElementById('adj-fill-'+id);
   if(fillEl){
-    const hasNeg=def.min<0;const zeroPct=hasNeg?((-def.min)/range*100):'0';
+    const hasNeg=def.min<0;
+    const zeroPct=hasNeg?((-def.min)/range*100):0;
     if(hasNeg){
-      if(v<0){fillEl.style.left=pct+'%';fillEl.style.width=(parseFloat(zeroPct)-parseFloat(pct))+'%';fillEl.style.background='var(--red)';}
-      else{fillEl.style.left=zeroPct+'%';fillEl.style.width=(parseFloat(pct)-parseFloat(zeroPct))+'%';fillEl.style.background='var(--acc)';}
-    }else{fillEl.style.left='0';fillEl.style.width=pct+'%';}
+      if(v<0){
+        fillEl.style.left=pct+'%';
+        fillEl.style.width=(zeroPct-pctNum).toFixed(1)+'%';
+        fillEl.style.background='var(--red)';
+      }else{
+        fillEl.style.left=zeroPct.toFixed(1)+'%';
+        fillEl.style.width=(pctNum-zeroPct).toFixed(1)+'%';
+        fillEl.style.background='var(--acc)';
+      }
+    }else{
+      fillEl.style.left='0';
+      fillEl.style.width=pct+'%';
+      fillEl.style.background='var(--acc)';
+    }
   }
   applyAdjustments();
 }
