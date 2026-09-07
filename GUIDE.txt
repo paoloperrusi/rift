@@ -1,0 +1,131 @@
+================================================================================
+                       RIFT — IMAGE FRACTURE & GLITCH TOOL
+                                 USER GUIDE
+================================================================================
+
+OVERVIEW
+--------
+RIFT is an in-browser creative tool for generative glitch art, digital 
+distortion, procedural image synthesis, and photographic destruction. It runs 
+100% client-side via HTML5 Canvas with zero external dependencies.
+
+
+WORKSPACE LAYOUT
+----------------
+1. TOP TITLEBAR
+   • Open / Export: Load images (or click "Demo Image" in drop zone), export PNG 
+     at 1x, 2x, or 4x resolution.
+   • History: Undo (Ctrl+Z) and Redo (Ctrl+Y) buttons to roll back or re-apply 
+     any committed operations.
+   • View Controls: Fit to screen, 1:1 actual pixels, or enter custom zoom %.
+   • Reset / Commit / Apply:
+     - Apply: Renders current effect parameters.
+     - Commit: Bakes the current result into the working source image.
+     - Reset: Restores image to the state before uncommitted previews.
+
+2. LEFT SIDEBAR (EFFECTS & PRESETS)
+   • Search Bar: Instant live search across all 50+ effects and generators.
+   • Effects Tab: Organized by category:
+     - Glitch: Scanline Tear, Channel Shift, Block Shuffle, Pixel Scatter,
+       JPEG Artifact, Data Reinterpret, Word Corrupt, Row Duplicate.
+     - Distort: Wave Distortion, Twirl/Swirl, Polar Inversion, Pinch/Bulge,
+       Ripple, Shear/Skew.
+     - Corrupt: Bitplane Isolate, Bitwise XOR, Noise Injection, Echo/Ghost,
+       Color Bleed.
+     - Mirror: Mirror H, Mirror V, Kaleidoscope, Tile Mirror, Droste Spiral,
+       Radial Tile.
+     - Pixel: Luminance Sort, Hue Sort, Pixelate, Halftone, Bayer Dither.
+     - Color: Hue Rotation, Palette Crush, False Color, Channel Swap, Invert,
+       Threshold.
+     - Art: Floyd-Steinberg Dither, Emboss, Oil Paint, Voronoi Shatter,
+       Stipple, ASCII Art.
+     - Geometry: Möbius Transform, Log-Polar Spiral, Affine Tile, Conformal zⁿ,
+       Perspective Warp, Wallpaper Groups.
+     - 3D: Sphere Wrap, Bump Map, Parallax Depth, Glass Refraction, Depth of
+       Field, Cube Face Map.
+     - Fractal: Mandelbrot Lens, Julia Warp, Newton Warp, IFS Warp,
+       Hyperbolic Tile, Reaction Diffusion.
+     - Generator: Standalone procedural pattern generators (Perlin Noise,
+       Voronoi Field, Gray-Scott, Plasma, Mandelbrot, Julia, Newton, L-System,
+       Flow Field, Truchet, Wave Interference, Spirograph, Lissajous, Attractor).
+   • Presets Tab: One-click aesthetic recipes (Vaporwave, Deep Glitch, CRT
+     Damage, Crystallize, Fractal Dream, etc.) and custom saved user presets.
+
+3. CENTER CANVAS VIEWPORT
+   • View Modes:
+     - Original: View unedited source.
+     - Result: View transformed output.
+     - Split: Interactive before/after split slider across the canvas.
+   • Navigation:
+     - Mouse Wheel: Zoom in and out anchored at cursor position.
+     - Spacebar + Drag (or Pan tool): Smooth panning across the canvas.
+     - Floating Toolbar: Select / XY Mapper (↖), Pan (✥), Crop (⬚).
+   • XY Interactive Mapper:
+     Click the 'X' or 'Y' icon on any parameter slider to map mouse drag on the
+     canvas directly to that parameter in real time!
+   • Crop Tool:
+     Select crop tool (⬚), drag a region on the canvas, choose fixed or free
+     aspect ratio, and press Enter or click Commit Crop.
+
+4. SEQUENCE CHAIN (BOTTOM STRIP)
+   • Chain multiple effects sequentially:
+     1. Choose an effect and adjust its parameters.
+     2. Click '+' on the sequence strip to add it.
+     3. Click '▶ run' to apply all chained effects in order.
+     4. Click '↻ cycle' to loop live animations through the sequence steps.
+
+5. RIGHT PANEL TABS
+   • Params:
+     - Live sliders with precise numeric click-to-edit values.
+     - XY Mapping toggles per slider.
+     - Quick Preset chips per effect.
+     - Randomize & Reset parameter buttons.
+   • Adjust:
+     - Geometry: 90° CW/CCW rotation, arbitrary angle, flip H/V.
+     - Resize: Target width/height with aspect ratio lock.
+     - Crop: Live preview and ratio constraints (1:1, 4:3, 16:9, 3:2, A4).
+     - Color & Tone: Brightness, contrast, saturation, hue, temperature, tint,
+       shadows, highlights, gamma, exposure, vibrance.
+     - Lens & Detail: Vignette, film grain, chromatic aberration, sharpen/blur.
+     - Commit Adjustments button to bake color/tone changes into working image.
+   • Mask:
+     - Target effects to specific regions of the image.
+     - Paint / Erase brushes with customizable size, hardness, and opacity.
+     - Fill and Clear mask buttons.
+     - Automatic Luminance Masks (Shadows, Midtones, Highlights).
+     - Edge Detection (Sobel filter) mask generator.
+     - Invert mask.
+     - "Enable Mask" toggle to blend effects through the mask.
+   • Script:
+     - Built-in JavaScript pixel shader editor.
+     - Inspect and fork source code of any native effect with the '</>' button.
+     - Live parameters via `param("name", { min, max, def })`.
+     - Fast helper methods: `ctx.sample(src, x, y)`, `ctx.set(dst, x, y, r, g, b)`,
+       `ctx.noise()`, `ctx.fbm()`, `ctx.palette()`, `ctx.luma()`.
+     - Real-time mini preview, syntax checking, and instant deployment.
+     - Save and load `.rift` script files.
+
+
+KEYBOARD SHORTCUTS
+------------------
+• Space + Drag       Pan canvas
+• Wheel              Zoom in / out at cursor
+• Z                  Zoom to fit
+• 1                  Zoom 100% (1:1)
+• Ctrl+Z / Cmd+Z     Undo last commit / crop / adjust
+• Ctrl+Y / Cmd+Y     Redo
+• O                  Open image file
+• S                  Export PNG
+• Enter (in Crop)    Commit crop
+• Escape             Cancel crop / close dialogs
+
+
+TIPS FOR BEST GLITCH RESULTS
+----------------------------
+1. Layering: Commit a subtle distortion (e.g. Wave Distortion or JPEG Artifact),
+   then apply Pixel Sorting on top for dramatic digital fragmentation.
+2. Targeted Glitches: Use the Mask tab's "Luma: Highlights" to constrain
+   Channel Shift or Scanline Tear only to bright highlights.
+3. Live Experimentation: Map X to 'intensity' and Y to 'frequency' in Scanline
+   Tear, then drag across the canvas for tactile performative glitching.
+================================================================================

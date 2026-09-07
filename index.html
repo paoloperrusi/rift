@@ -281,10 +281,13 @@ body.drag-over #cvs-area{outline:2px dashed var(--acc);outline-offset:-6px;}
     <option value="2">2× export</option>
     <option value="4">4× export</option>
   </select>
+  <div class="tb-sep"></div>
+  <button class="btn sm icon-btn" id="btn-undo" onclick="undo()" title="Undo (Ctrl+Z)" disabled>↶</button>
+  <button class="btn sm icon-btn" id="btn-redo" onclick="redo()" title="Redo (Ctrl+Y)" disabled>↷</button>
   <div class="tbr">
-    <button class="btn sm" onclick="resetToOrig()">↺ reset</button>
-    <button class="btn sm" onclick="commitEffect()">✓ commit</button>
-    <button class="btn acc sm" onclick="applyAndPreview()">▶ apply</button>
+    <button class="btn sm" onclick="resetToOrig()" title="Reset preview to current source">↺ reset</button>
+    <button class="btn sm" onclick="commitEffect()" title="Bake effect into working source">✓ commit</button>
+    <button class="btn acc sm" onclick="applyAndPreview()" title="Apply current parameters">▶ apply</button>
   </div>
 </div>
 
@@ -295,6 +298,9 @@ body.drag-over #cvs-area{outline:2px dashed var(--acc);outline-offset:-6px;}
   <div id="sb-tabs">
     <div class="sb-tab on" onclick="setSbTab('effects',this)">effects</div>
     <div class="sb-tab" onclick="setSbTab('presets',this)">presets</div>
+  </div>
+  <div id="sb-search-wrap" style="padding:6px 10px;border-bottom:1px solid var(--ln);flex-shrink:0;">
+    <input id="sb-search" type="text" placeholder="filter effects…" oninput="filterSidebar(this.value)" style="width:100%;height:24px;background:var(--bg3);border:1px solid var(--ln2);border-radius:var(--r);color:var(--t0);font-family:var(--font-mono);font-size:10px;padding:0 7px;outline:none;">
   </div>
   <div id="sb-body"></div>
 </div>
@@ -325,10 +331,15 @@ body.drag-over #cvs-area{outline:2px dashed var(--acc);outline-offset:-6px;}
       <div id="ftool-crop" class="ftool" onclick="setFTool('crop',this)" title="Crop — drag to define crop region, then commit in Adjust tab">⬚</div>
     </div>
 
+    <!-- Split comparison draggable divider -->
+    <div id="split-bar" style="display:none;position:absolute;top:0;bottom:0;width:2px;background:var(--acc2);cursor:ew-resize;z-index:8;">
+      <div style="position:absolute;top:50%;left:-8px;width:18px;height:28px;border-radius:4px;background:var(--bg2);border:1px solid var(--acc);display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--acc2);transform:translateY(-50%);user-select:none;pointer-events:none;">↔</div>
+    </div>
     <div id="drop-hint">
       <div class="dh-hex">⬡</div>
       <div class="dh-line1">drop image · click to open</div>
       <div class="dh-line2">or pick a generator from the sidebar</div>
+      <button class="btn sm" onclick="loadDemoImage(event)" style="margin-top:6px;pointer-events:auto;" title="Generate a rich test card pattern">✦ load demo image</button>
     </div>
     <canvas id="main-cvs"></canvas>
     <div id="vc">
@@ -440,17 +451,30 @@ body.drag-over #cvs-area{outline:2px dashed var(--acc);outline-offset:-6px;}
     </div>
     <div style="padding:0 12px" id="adj-sliders-lens"></div>
     <div class="adj-sep"></div>
-    <div class="adj-sec" style="padding-bottom:10px">
-      <button class="btn sm ghost" style="width:100%" onclick="adjReset()" title="Reset all colour adjustments">reset all adjustments</button>
+    <div class="adj-sec">
+      <div class="adj-sec-title">sharpen / blur</div>
+    </div>
+    <div style="padding:0 12px" id="adj-sliders-sharpen"></div>
+    <div class="adj-sep"></div>
+    <div class="adj-sec" style="padding-bottom:10px;display:flex;flex-direction:column;gap:6px">
+      <button class="btn sm acc" style="width:100%" onclick="adjCommit()" title="Bake current adjustments into source">✓ commit adjustments to source</button>
+      <button class="btn sm ghost" style="width:100%" onclick="adjReset()" title="Reset all colour adjustments">↺ reset all adjustments</button>
     </div>
   </div>
 
   <div id="pane-mask" style="display:none">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:0 2px 4px;">
+      <label style="font-family:var(--font-mono);font-size:10px;color:var(--t1);display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none;">
+        <input type="checkbox" id="mask-enable" onchange="toggleMaskEnable(this.checked)" checked>
+        enable mask blend
+      </label>
+      <span id="mask-status-badge" style="font-family:var(--font-mono);font-size:8px;color:var(--grn);background:rgba(61,214,140,0.1);padding:1px 5px;border-radius:2px;">active</span>
+    </div>
     <canvas id="mask-cvs" width="216" height="216"></canvas>
     <div class="mt-row">
       <div class="mt on" onclick="setMTool('paint',this)">✏ paint</div>
       <div class="mt" onclick="setMTool('erase',this)">◻ erase</div>
-      <div class="mt" onclick="setMTool('fill',this)">◼ fill</div>
+      <div class="mt" onclick="fillAllMask()">◼ fill all</div>
     </div>
     <div class="pr"><div class="pl"><span class="pl-name">size</span><span class="pl-val" id="mv-sz">20</span></div>
       <input type="range" min="2" max="80" value="20" oninput="updM('size',this)"></div>
@@ -565,14 +589,67 @@ const ST={
   img:null,imgW:0,imgH:0,
   result:null,
   activeKey:null,activeParams:{},
-  mask:null,
+  mask:null,maskEnabled:true,
   seqSteps:[],cycling:false,cycleTimer:null,
-  view:'orig',
+  view:'result',splitPos:0.5,
   scrUnlocked:false,scrType:'effect',
   sbTab:'effects',rpTab:'params',
   userPresets:[],userScripts:[],
   mask_brush:{size:20,hard:.8,opacity:1,tool:'paint'},
+  history:[],historyIndex:-1,
+  xyParamX:null,xyParamY:null,xyActive:false,xyLastX:0,xyLastY:0,
+  _xyDragging:false,_cropRect:null,_cropDragging:false,_splitDragging:false,
+  filterQuery:'',_spacePanning:false,
 };
+
+// ═══════════════════════ HISTORY (UNDO / REDO) ═══════════════
+function pushHistory(desc='Action'){
+  if(!ST.img)return;
+  const clone=mkId(ST.imgW,ST.imgH);
+  clone.data.set(ST.img.data);
+  ST.history=ST.history.slice(0,ST.historyIndex+1);
+  ST.history.push({img:clone,w:ST.imgW,h:ST.imgH,desc});
+  if(ST.history.length>25)ST.history.shift();
+  ST.historyIndex=ST.history.length-1;
+  updateHistoryUI();
+}
+
+function undo(){
+  if(ST.historyIndex<=0)return;
+  ST.historyIndex--;
+  const state=ST.history[ST.historyIndex];
+  const clone=mkId(state.w,state.h);
+  clone.data.set(state.img.data);
+  ST.img=clone;ST.imgW=state.w;ST.imgH=state.h;
+  ST.result=clone;ST.mask=null;
+  loadId(ST.img,ST.imgW,ST.imgH);
+  updateHistoryUI();
+  toast('undo: '+state.desc,'info');
+  if(ST.activeKey&&!GEN[ST.activeKey])previewEff();
+  renderMaskCanvas();
+}
+
+function redo(){
+  if(ST.historyIndex>=ST.history.length-1)return;
+  ST.historyIndex++;
+  const state=ST.history[ST.historyIndex];
+  const clone=mkId(state.w,state.h);
+  clone.data.set(state.img.data);
+  ST.img=clone;ST.imgW=state.w;ST.imgH=state.h;
+  ST.result=clone;ST.mask=null;
+  loadId(ST.img,ST.imgW,ST.imgH);
+  updateHistoryUI();
+  toast('redo: '+state.desc,'info');
+  if(ST.activeKey&&!GEN[ST.activeKey])previewEff();
+  renderMaskCanvas();
+}
+
+function updateHistoryUI(){
+  const u=document.getElementById('btn-undo');
+  const r=document.getElementById('btn-redo');
+  if(u)u.disabled=(ST.historyIndex<=0);
+  if(r)r.disabled=(ST.historyIndex>=ST.history.length-1);
+}
 
 // ═══════════════════ CATEGORY COLOURS ════════════════════════
 const CC={
@@ -1509,18 +1586,34 @@ const NATIVE_PRESETS={
 };
 
 // ═══════════════════════ UI RENDERING ═══════════════════════
+function filterSidebar(q){
+  ST.filterQuery=(q||'').toLowerCase().trim();
+  renderSidebar();
+}
+
 function renderSidebar(){
   const body=document.getElementById('sb-body');body.innerHTML='';
+  const q=ST.filterQuery;
   if(ST.sbTab==='effects'){
     const cats=['glitch','distort','corrupt','mirror','pixel','color','art','geometry','3d','fractal'];
     for(const cat of cats){
-      const effs=Object.entries(EFX).filter(([,v])=>v.cat===cat);if(!effs.length)continue;
+      let effs=Object.entries(EFX).filter(([,v])=>v.cat===cat);
+      if(q){
+        effs=effs.filter(([k,v])=>v.name.toLowerCase().includes(q)||k.toLowerCase().includes(q)||(v.desc&&v.desc.toLowerCase().includes(q))||cat.includes(q));
+      }
+      if(!effs.length)continue;
       body.appendChild(catHead(cat,CC[cat],effs.length));
       for(const[key,ef] of effs){body.appendChild(effRow(key,ef,cat));}
     }
     // generators
-    body.appendChild(catHead('generator',CC.generator,Object.keys(GEN).length));
-    for(const[key,gen] of Object.entries(GEN)){body.appendChild(effRow(key,gen,'generator'));}
+    let gens=Object.entries(GEN);
+    if(q){
+      gens=gens.filter(([k,v])=>v.name.toLowerCase().includes(q)||k.toLowerCase().includes(q)||'generator'.includes(q));
+    }
+    if(gens.length){
+      body.appendChild(catHead('generator',CC.generator,gens.length));
+      for(const[key,gen] of gens){body.appendChild(effRow(key,gen,'generator'));}
+    }
     // user scripts as effects
     const userEffects=ST.userScripts.filter(s=>s.type==='effect');
     const userGens=ST.userScripts.filter(s=>s.type==='generator');
@@ -1673,17 +1766,88 @@ function applyEffPreset(jsonStr){
 function randParams(){const ef=EFX[ST.activeKey];if(!ef)return;for(const p of ef.params)ST.activeParams[p.id]=+(p.min+(p.max-p.min)*Math.random()).toFixed(3);renderParams(ef,ST.activeKey);if(ST.img)previewEff();}
 function resetParams(){const ef=EFX[ST.activeKey];if(!ef)return;for(const p of ef.params)ST.activeParams[p.id]=p.def;renderParams(ef,ST.activeKey);if(ST.img)previewEff();}
 
+// ═══════════════════════ MASK BLEND & VIEW ══════════════════
+function applyMaskBlend(srcImg, effectImg){
+  if(!ST.maskEnabled||!ST.mask||ST.mask.length!==srcImg.width*srcImg.height) return effectImg;
+  const w=srcImg.width, h=srcImg.height;
+  const blended=mkId(w,h);
+  const sd=srcImg.data, ed=effectImg.data, bd=blended.data, m=ST.mask;
+  for(let i=0;i<w*h;i++){
+    const pi=i*4;
+    const a=m[i]/255;
+    bd[pi]   = Math.round(sd[pi]   *(1-a) + ed[pi]   *a);
+    bd[pi+1] = Math.round(sd[pi+1] *(1-a) + ed[pi+1] *a);
+    bd[pi+2] = Math.round(sd[pi+2] *(1-a) + ed[pi+2] *a);
+    bd[pi+3] = 255;
+  }
+  return blended;
+}
+
+function renderCurrentView(){
+  if(!ST.img)return;
+  const splitBar=document.getElementById('split-bar');
+  if(ST.view==='orig'){
+    if(splitBar)splitBar.style.display='none';
+    loadId(ST.img,ST.imgW,ST.imgH);
+  } else if(ST.view==='result'){
+    if(splitBar)splitBar.style.display='none';
+    const disp=ST.result||ST.img;
+    loadId(disp,disp.width,disp.height);
+  } else if(ST.view==='split'){
+    const res=ST.result||ST.img;
+    const w=ST.imgW, h=ST.imgH;
+    const splitX=Math.max(0,Math.min(w,Math.round(w*ST.splitPos)));
+    const c=document.createElement('canvas');c.width=w;c.height=h;
+    const ctx=c.getContext('2d');
+    ctx.putImageData(ST.img,0,0);
+    ctx.putImageData(res,0,0,splitX,0,w-splitX,h);
+    // Visual split separator line
+    ctx.fillStyle='rgba(162,155,254,0.9)';
+    ctx.fillRect(splitX-1,0,2,h);
+    loadId(ctx.getImageData(0,0,w,h),w,h);
+    updateSplitBarPos();
+  }
+}
+
+function updateSplitBarPos(){
+  const bar=document.getElementById('split-bar');
+  if(!bar)return;
+  if(ST.view!=='split'||!ST.img){bar.style.display='none';return;}
+  const area=document.getElementById('cvs-area');
+  const cvs=document.getElementById('main-cvs');
+  const aw=area.clientWidth,ah=area.clientHeight;
+  const baseX=(aw-cvs.width*VP.zoom)/2+VP.panX;
+  const baseY=(ah-cvs.height*VP.zoom)/2+VP.panY;
+  const sx=baseX+ST.imgW*ST.splitPos*VP.zoom;
+  bar.style.display='block';
+  bar.style.left=sx+'px';
+  bar.style.top=baseY+'px';
+  bar.style.height=(ST.imgH*VP.zoom)+'px';
+}
+
 // ═══════════════════════ PREVIEW / APPLY ═════════════════════
 function previewEff(){
-  if(!ST.img)return;if(GEN[ST.activeKey]){previewGen();return;}
+  if(!ST.img)return;
+  if(GEN[ST.activeKey]){previewGen();return;}
   const ef=EFX[ST.activeKey];if(!ef)return;
-  try{const r=ef.fn(ST.img,{...ST.activeParams});ST.result=r;showOnCanvas(r);}catch(e){console.warn(e);}
+  try{
+    const raw=ef.fn(ST.img,{...ST.activeParams});
+    ST.result=applyMaskBlend(ST.img,raw);
+    renderCurrentView();
+  }catch(e){console.warn(e);}
 }
+
 function previewGen(){
   const gen=GEN[ST.activeKey];if(!gen)return;
   const w=Math.min(ST.imgW||400,400),h=Math.min(ST.imgH||300,300);
-  try{const c=gen.fn(w,h,{...ST.activeParams});const ctx2=c.getContext('2d');ST.result=ctx2.getImageData(0,0,w,h);showOnCanvas(ST.result);}catch(e){console.warn(e);}
+  try{
+    const c=gen.fn(w,h,{...ST.activeParams});
+    const ctx2=c.getContext('2d');
+    ST.result=ctx2.getImageData(0,0,w,h);
+    renderCurrentView();
+  }catch(e){console.warn(e);}
 }
+
 function runGen(){
   const gen=GEN[ST.activeKey];if(!gen)return;
   toast('generating…','info');
@@ -1691,34 +1855,100 @@ function runGen(){
     try{
       const w=ST.imgW||800,h=ST.imgH||600;
       const c=gen.fn(w,h,{...ST.activeParams});const ctx2=c.getContext('2d');
-      const id=ctx2.getImageData(0,0,w,h);ST.img=id;ST.imgW=w;ST.imgH=h;ST.result=id;
-      loadId(id,w,h);document.getElementById('drop-hint').style.display='none';
+      const id=ctx2.getImageData(0,0,w,h);
+      pushHistory('generate '+gen.name);
+      ST.img=id;ST.imgW=w;ST.imgH=h;ST.result=id;ST.mask=null;
+      loadId(id,w,h);
+      zoomFit();
       toast('generated: '+gen.name+' '+w+'×'+h,'ok');
     }catch(e){toast('generator error: '+e.message,'err');console.error(e);}
   },10);
 }
+
 function applyAndPreview(){
   if(!ST.img&&!GEN[ST.activeKey]){toast('open an image first','err');return;}
   if(!ST.activeKey){toast('select an effect','err');return;}
   if(GEN[ST.activeKey]){runGen();return;}
   const ef=EFX[ST.activeKey];if(!ef)return;
-  const r=ef.fn(ST.img,{...ST.activeParams});ST.result=r;showOnCanvas(r);toast('applied: '+ef.name,'ok');
+  const raw=ef.fn(ST.img,{...ST.activeParams});
+  ST.result=applyMaskBlend(ST.img,raw);
+  renderCurrentView();
+  toast('applied: '+ef.name,'ok');
 }
+
 function commitEffect(){
   if(!ST.result){toast('nothing to commit','err');return;}
+  pushHistory('commit '+(EFX[ST.activeKey]?.name||'effect'));
   ST.img=ST.result;ST.imgW=ST.result.width;ST.imgH=ST.result.height;
-  loadId(ST.img,ST.imgW,ST.imgH);toast('committed to source','ok');
+  loadId(ST.img,ST.imgW,ST.imgH);
+  toast('committed to working source','ok');
 }
+
 function showOnCanvas(id){loadId(id,id.width,id.height);}
+
 function loadId(id,w,h){
   const cvs=document.getElementById('main-cvs');
   cvs.width=w; cvs.height=h;
   cvs.getContext('2d').putImageData(id,0,0);
   cvs.style.display='block';
   document.getElementById('drop-hint').style.display='none';
-  posCanvas(); // keep zoom/pan in sync whenever canvas content changes
+  posCanvas();
 }
-function resetToOrig(){if(!ST.img)return;loadId(ST.img,ST.imgW,ST.imgH);toast('reset','info');}
+
+function resetToOrig(){
+  if(!ST.img)return;
+  ST.result=ST.img;
+  renderCurrentView();
+  toast('preview reset to source','info');
+}
+
+function loadDemoImage(e){
+  if(e)e.stopPropagation();
+  const w=800,h=600;
+  const c=document.createElement('canvas');c.width=w;c.height=h;
+  const ctx=c.getContext('2d');
+  
+  // Background gradient
+  const grad=ctx.createLinearGradient(0,0,w,h);
+  grad.addColorStop(0,'#0a0a10');
+  grad.addColorStop(0.5,'#181628');
+  grad.addColorStop(1,'#06060c');
+  ctx.fillStyle=grad;ctx.fillRect(0,0,w,h);
+  
+  // Fine grid
+  ctx.strokeStyle='rgba(255,255,255,0.08)';ctx.lineWidth=1;
+  for(let x=0;x<w;x+=40){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,h);ctx.stroke();}
+  for(let y=0;y<h;y+=40){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke();}
+  
+  // Concentric geometric circles
+  for(let r=220;r>=30;r-=22){
+    ctx.beginPath();ctx.arc(w/2,h/2,r,0,Math.PI*2);
+    ctx.strokeStyle=`hsl(${(220-r)*1.3+200}, 80%, 60%)`;
+    ctx.lineWidth=2.5;ctx.stroke();
+  }
+  
+  // Rotated diamond
+  ctx.save();ctx.translate(w/2,h/2);ctx.rotate(Math.PI/4);
+  const dGrad=ctx.createLinearGradient(-90,-90,90,90);
+  dGrad.addColorStop(0,'#e0546e');dGrad.addColorStop(0.5,'#6c5ce7');dGrad.addColorStop(1,'#38d5c8');
+  ctx.fillStyle=dGrad;ctx.fillRect(-85,-85,170,170);
+  ctx.restore();
+  
+  // Typography badge
+  ctx.fillStyle='#ffffff';ctx.font='bold 32px monospace';ctx.textAlign='center';
+  ctx.fillText('RIFT TEST PATTERN',w/2,h/2-130);
+  ctx.font='13px monospace';ctx.fillStyle='#a29bfe';
+  ctx.fillText('800×600 RGBA · GENERATIVE HARMONIC CARD',w/2,h/2+150);
+  
+  const id=ctx.getImageData(0,0,w,h);
+  pushHistory('demo image');
+  ST.img=id;ST.imgW=w;ST.imgH=h;ST.result=id;ST.mask=null;
+  loadId(id,w,h);
+  zoomFit();
+  toast('sample test card loaded','ok');
+  if(ST.activeKey&&!GEN[ST.activeKey])previewEff();
+  renderMaskCanvas();
+}
 
 // ═══════════════════════ IMAGE I/O ═══════════════════════════
 function openImage(){document.getElementById('fi').click();}
@@ -1738,6 +1968,7 @@ function fileChosen(input){
     const rw=document.getElementById('adj-rw'); if(rw)rw.value=w;
     const rh2=document.getElementById('adj-rh'); if(rh2)rh2.value=h;
     // show image and fit viewport
+    pushHistory('open image');
     loadId(ST.img,w,h);
     zoomFit();
     toast('loaded '+w+'×'+h,'ok');
@@ -1747,11 +1978,7 @@ function fileChosen(input){
   img.src=url;
   input.value='';
 }
-function exportImg(){
-  const data=ST.result||ST.img;if(!data){toast('nothing to export','err');return;}
-  const c=document.createElement('canvas');c.width=data.width;c.height=data.height;c.getContext('2d').putImageData(data,0,0);
-  const a=document.createElement('a');a.href=c.toDataURL('image/png');a.download='rift_'+Date.now()+'.png';a.click();toast('exported PNG','ok');
-}
+// exportImg is defined below with high-res options
 function evDragOver(e){e.preventDefault();document.body.classList.add('drag-over');}
 function evDragLeave(){document.body.classList.remove('drag-over');}
 function evDrop(e){e.preventDefault();document.body.classList.remove('drag-over');const f=e.dataTransfer.files[0];if(f&&f.type.startsWith('image/'))fileChosen({files:[f]});}
@@ -1762,24 +1989,10 @@ function cvAreaClick(e){
 
 // ═══════════════════════ VIEW ════════════════════════════════
 function setView(mode,el){
-  ST.view=mode;document.querySelectorAll('.vcb').forEach(b=>b.classList.remove('on'));el.classList.add('on');
-  if(!ST.img)return;
-  if(mode==='orig') loadId(ST.img,ST.imgW,ST.imgH);
-  else if(mode==='result'&&ST.result) loadId(ST.result,ST.result.width,ST.result.height);
-  else if(mode==='result'&&!ST.result) loadId(ST.img,ST.imgW,ST.imgH); // no result yet, show orig
-  else if(mode==='split'&&ST.result&&ST.img){
-    const c=document.createElement('canvas');c.width=ST.imgW;c.height=ST.imgH;
-    const ctx=c.getContext('2d');
-    ctx.putImageData(ST.img,0,0);
-    ctx.putImageData(ST.result,0,0,ST.imgW/2,0,ST.imgW/2,ST.imgH);
-    ctx.fillStyle='rgba(108,92,231,.9)';ctx.fillRect(ST.imgW/2-.5,0,1,ST.imgH);
-    const cvs=document.getElementById('main-cvs');
-    cvs.width=ST.imgW;cvs.height=ST.imgH;
-    cvs.getContext('2d').drawImage(c,0,0);
-    cvs.style.display='block';
-    document.getElementById('drop-hint').style.display='none';
-    posCanvas();
-  }
+  ST.view=mode;
+  document.querySelectorAll('.vcb').forEach(b=>b.classList.remove('on'));
+  if(el) el.classList.add('on');
+  renderCurrentView();
 }
 
 // ═══════════════════════ SEQUENCE ════════════════════════════
@@ -1823,6 +2036,7 @@ function paintMask(e){
   const r=MBR.size/c.width*ST.imgW;
   for(let dy=-r;dy<=r;dy++)for(let dx=-r;dx<=r;dx++){const d=Math.sqrt(dx*dx+dy*dy);if(d>r)continue;const x=Math.round(cx2+dx),y=Math.round(cy2+dy);if(x<0||x>=ST.imgW||y<0||y>=ST.imgH)continue;const fo=1-Math.pow(d/r,2)*MBR.hard,val=Math.floor(fo*MBR.opacity*255);const i=y*ST.imgW+x;if(MBR.tool==='erase')ST.mask[i]=Math.max(0,ST.mask[i]-val);else ST.mask[i]=Math.min(255,ST.mask[i]+val);}
   renderMaskCanvas();
+  if(ST.img&&ST.activeKey&&ST.maskEnabled)previewEff();
 }
 function renderMaskCanvas(){
   const c=document.getElementById('mask-cvs'); if(!c) return;
@@ -1851,7 +2065,30 @@ function renderMaskCanvas(){
     ctx.putImageData(id,0,0);
   }
 }
-function setMTool(tool,el){MBR.tool=tool;document.querySelectorAll('.mt').forEach(e=>e.classList.remove('on'));el.classList.add('on');}
+function toggleMaskEnable(val){
+  ST.maskEnabled=val;
+  const badge=document.getElementById('mask-status-badge');
+  if(badge){
+    badge.textContent=val?'active':'disabled';
+    badge.style.color=val?'var(--grn)':'var(--t3)';
+    badge.style.background=val?'rgba(61,214,140,0.1)':'var(--bg3)';
+  }
+  if(ST.img&&ST.activeKey)previewEff();
+}
+
+function fillAllMask(){
+  if(!maskEnsure())return;
+  ST.mask.fill(255);
+  renderMaskCanvas();
+  if(ST.img&&ST.activeKey)previewEff();
+  toast('mask filled','info');
+}
+
+function setMTool(tool,el){
+  MBR.tool=tool;
+  document.querySelectorAll('.mt').forEach(e=>e.classList.remove('on'));
+  el.classList.add('on');
+}
 function updM(type,el){const v=parseFloat(el.value);el.style.setProperty('--v',((v-parseFloat(el.min))/(parseFloat(el.max)-parseFloat(el.min))*100).toFixed(1)+'%');if(type==='size'){MBR.size=v;document.getElementById('mv-sz').textContent=v;}else if(type==='hard'){MBR.hard=v/100;document.getElementById('mv-hd').textContent=(v/100).toFixed(2);}else if(type==='opacity'){MBR.opacity=v/100;document.getElementById('mv-op').textContent=(v/100).toFixed(2);}}
 function lumaMask(range){if(!ST.img)return;if(!ST.mask)ST.mask=new Uint8Array(ST.imgW*ST.imgH);for(let i=0;i<ST.imgW*ST.imgH;i++){const pi=i*4,l=luma(ST.img.data[pi],ST.img.data[pi+1],ST.img.data[pi+2]);ST.mask[i]=range==='shadows'?(l<85?255:0):range==='mids'?(l>=85&&l<170?255:0):(l>=170?255:0);}renderMaskCanvas();toast('luma mask applied','ok');}
 function edgeMask(){if(!ST.img)return;if(!ST.mask)ST.mask=new Uint8Array(ST.imgW*ST.imgH);const d=ST.img.data,w=ST.imgW,h=ST.imgH;for(let y=1;y<h-1;y++)for(let x=1;x<w-1;x++){const i=(y*w+x)*4;const gx=luma(d[i-4],d[i-3],d[i-2])-luma(d[i+4],d[i+5],d[i+6]),gy=luma(d[i-w*4],d[i-w*4+1],d[i-w*4+2])-luma(d[i+w*4],d[i+w*4+1],d[i+w*4+2]);ST.mask[y*w+x]=clamp(Math.sqrt(gx*gx+gy*gy)*2);}renderMaskCanvas();toast('edge mask applied','ok');}
@@ -1875,7 +2112,9 @@ function deletePreset(i,e){e.stopPropagation();ST.userPresets.splice(i,1);render
 // ═══════════════════════ SCRIPT ══════════════════════════════
 function setSbTab(tab,el){ST.sbTab=tab;document.querySelectorAll('.sb-tab').forEach(t=>t.classList.remove('on'));el.classList.add('on');renderSidebar();}
 function setRpTab(tab,el){
-  ST.rpTab=tab;document.querySelectorAll('.rp-tab').forEach(t=>t.classList.remove('on'));el.classList.add('on');
+  ST.rpTab=tab;
+  document.querySelectorAll('.rp-tab').forEach(t=>t.classList.remove('on'));
+  if(el) el.classList.add('on');
   document.getElementById('pane-params').style.display=tab==='params'?'flex':'none';
   const pa=document.getElementById('pane-adjust');if(pa)pa.style.display=tab==='adjust'?'flex':'none';
   document.getElementById('pane-mask').style.display=tab==='mask'?'flex':'none';
@@ -2114,7 +2353,18 @@ function setFTool(t,el){
 }
 function cvMDown(e){
   if(e.target.classList.contains('ftool'))return;
-  if(_activeTool==='pan'||(e.button===1)){
+  if(ST.view==='split'&&ST.img){
+    const area=document.getElementById('cvs-area');
+    const cvs=document.getElementById('main-cvs');
+    const aw=area.clientWidth;
+    const baseX=(aw-cvs.width*VP.zoom)/2+VP.panX;
+    const barX=baseX+ST.imgW*ST.splitPos*VP.zoom;
+    if(Math.abs(e.clientX-barX)<15){
+      ST._splitDragging=true;
+      return;
+    }
+  }
+  if(ST._spacePanning||_activeTool==='pan'||(e.button===1)){
     VP.panning=true;VP.px0=e.clientX;VP.py0=e.clientY;VP.ox=VP.panX;VP.oy=VP.panY;
     document.getElementById('cvs-area').style.cursor='grabbing';
   } else if(_activeTool==='crop'&&ST.img){
@@ -2130,8 +2380,19 @@ function cvMDown(e){
   } else if(!ST.img&&e.target.id==='cvs-area'){ openImage(); }
 }
 function cvMMove(e){
+  if(ST._splitDragging&&ST.img){
+    const area=document.getElementById('cvs-area');
+    const cvs=document.getElementById('main-cvs');
+    const aw=area.clientWidth;
+    const baseX=(aw-cvs.width*VP.zoom)/2+VP.panX;
+    const imgX=(e.clientX-baseX)/VP.zoom;
+    ST.splitPos=Math.max(0,Math.min(1,imgX/ST.imgW));
+    renderCurrentView();
+    return;
+  }
   if(VP.panning){
     VP.panX=VP.ox+(e.clientX-VP.px0);VP.panY=VP.oy+(e.clientY-VP.py0);posCanvas();
+    if(ST.view==='split')updateSplitBarPos();
   }
   if(ST._cropDragging&&ST.img){
     const pos=canvasToImage(e);
@@ -2151,7 +2412,8 @@ function cvMMove(e){
   }
 }
 function cvMUp(e){
-  if(VP.panning){VP.panning=false;document.getElementById('cvs-area').style.cursor=_activeTool==='pan'?'grab':'default';}
+  if(ST._splitDragging){ST._splitDragging=false;}
+  if(VP.panning){VP.panning=false;document.getElementById('cvs-area').style.cursor=_activeTool==='pan'?'grab':ST._spacePanning?'grab':'default';}
   if(ST._cropDragging){ST._cropDragging=false;updateCropPreview();}
   if(ST._xyDragging){ST._xyDragging=false;}
 }
@@ -2211,6 +2473,7 @@ function adjRotate(deg){
   const tmp2=document.createElement('canvas');tmp2.width=ST.imgW;tmp2.height=ST.imgH;
   tmp2.getContext('2d').putImageData(ST.img,0,0);
   ctx.drawImage(tmp2,-ST.imgW/2,-ST.imgH/2);ctx.restore();
+  pushHistory('rotate '+deg+'°');
   ST.img=ctx.getImageData(0,0,nw,nh);ST.imgW=nw;ST.imgH=nh;ST.mask=null;
   loadId(ST.img,nw,nh);posCanvas();toast('rotated '+deg+'°','ok');
 }
@@ -2224,6 +2487,7 @@ function adjFlip(axis){
   const tmp=document.createElement('canvas');tmp.width=ST.imgW;tmp.height=ST.imgH;
   tmp.getContext('2d').putImageData(ST.img,0,0);
   ctx.drawImage(tmp,0,0);ctx.restore();
+  pushHistory('flip '+axis);
   ST.img=ctx.getImageData(0,0,ST.imgW,ST.imgH);
   loadId(ST.img,ST.imgW,ST.imgH);toast('flipped '+axis,'ok');
 }
@@ -2245,6 +2509,7 @@ function adjResize(){
   const tmp=document.createElement('canvas');tmp.width=ST.imgW;tmp.height=ST.imgH;
   tmp.getContext('2d').putImageData(ST.img,0,0);
   ctx.drawImage(tmp,0,0,tw,th);
+  pushHistory('resize '+tw+'×'+th);
   ST.img=ctx.getImageData(0,0,tw,th);ST.imgW=tw;ST.imgH=th;ST.mask=null;
   loadId(ST.img,tw,th);posCanvas();
   if(document.getElementById('adj-rw'))document.getElementById('adj-rw').value=tw;
@@ -2258,6 +2523,7 @@ function adjCommitCrop(){
   if(cr.w<1||cr.h<1){toast('crop region too small','err');return;}
   const c=document.createElement('canvas');c.width=cr.w;c.height=cr.h;
   c.getContext('2d').putImageData(ST.img,-cr.x,-cr.y);
+  pushHistory('crop '+cr.w+'×'+cr.h);
   ST.img=c.getContext('2d').getImageData(0,0,cr.w,cr.h);
   ST.imgW=cr.w;ST.imgH=cr.h;ST.mask=null;ST._cropRect=null;
   document.getElementById('crop-rect').style.display='none';
@@ -2322,12 +2588,7 @@ function buildAdjSliders(){
     });
     h+='</div>';el.innerHTML=h;
   });
-  // add sharpen container if missing
-  const pa=document.getElementById('pane-adjust');
-  if(pa&&!document.getElementById('adj-sliders-sharpen')){
-    pa.innerHTML+=`<div class="adj-sep"></div><div class="adj-sec"><div class="adj-sec-title">sharpen / blur</div></div><div style="padding:0 12px" id="adj-sliders-sharpen"></div>`;
-    ADJ_DEFS.filter(d=>d.group==='sharpen').forEach(d=>{/* built above */});
-  }
+  // sharpen sliders container is in HTML template
 }
 
 function upAdj(id,el){
@@ -2467,9 +2728,22 @@ function applyAdjustments(){
   ST.result=dst;showOnCanvas(dst);
 }
 
+function adjCommit(){
+  if(!ST.result){toast('no adjustments to commit','err');return;}
+  pushHistory('commit adjustments');
+  ST.img=ST.result;ST.imgW=ST.result.width;ST.imgH=ST.result.height;
+  loadId(ST.img,ST.imgW,ST.imgH);
+  toast('adjustments baked into source','ok');
+}
+
 function adjReset(){
   ADJ_DEFS.forEach(d=>{ADJ[d.id]=d.def;});
-  buildAdjSliders();toast('adjustments reset','info');
+  buildAdjSliders();
+  if(ST.img){
+    ST.result=ST.img;
+    renderCurrentView();
+  }
+  toast('adjustments reset','info');
 }
 
 // ─── XY MAPPER ──────────────────────────────────────────────
@@ -2572,18 +2846,45 @@ function exportImg(){
   toast('exported '+scale+'× PNG '+sw+'×'+sh,'ok');
 }
 
-// ─── PATCH: add adj tab to setRpTab ─────────────────────────
-const _origSetRpTab=setRpTab;
-function setRpTab(tab,el){
-  _origSetRpTab(tab,el);
-  const pa=document.getElementById('pane-adjust');
-  if(pa){
-    pa.style.display=tab==='adjust'?'flex':'none';
-    if(tab==='adjust')buildAdjSliders();
-  }
-}
+// consolidated setRpTab above
 
 // ─── PATCH: resize input defaults and fit view when image loads (merged into fileChosen above)
+
+// ═══════════════════════ KEYBOARD SHORTCUTS ══════════════════
+window.addEventListener('keydown',e=>{
+  if(['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName))return;
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){
+    e.preventDefault();
+    if(e.shiftKey)redo();else undo();
+  } else if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='y'){
+    e.preventDefault();redo();
+  } else if(e.code==='Space'){
+    if(!ST._spacePanning){
+      ST._spacePanning=true;
+      document.getElementById('cvs-area').style.cursor='grab';
+    }
+  } else if(e.key.toLowerCase()==='z'){
+    zoomFit();
+  } else if(e.key==='1'){
+    zoom100();
+  } else if(e.key.toLowerCase()==='o'){
+    openImage();
+  } else if(e.key.toLowerCase()==='s'&&(e.ctrlKey||e.metaKey)){
+    e.preventDefault();exportImg();
+  } else if(e.key==='Enter'){
+    if(ST._cropRect&&ST._cropRect.w>0)adjCommitCrop();
+  } else if(e.key==='Escape'){
+    if(ST._cropRect)adjCancelCrop();
+    closeModal('modal-warn');closeModal('modal-fromscript');
+  }
+});
+
+window.addEventListener('keyup',e=>{
+  if(e.code==='Space'){
+    ST._spacePanning=false;
+    document.getElementById('cvs-area').style.cursor=_activeTool==='pan'?'grab':_activeTool==='crop'?'crosshair':'default';
+  }
+});
 
 // ═══════════════════════ INIT ════════════════════════════════
 (function init(){
