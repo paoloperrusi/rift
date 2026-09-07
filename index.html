@@ -349,8 +349,9 @@ body.drag-over #cvs-area{outline:2px dashed var(--acc);outline-offset:-6px;}
     </div>
 
     <!-- Split comparison draggable divider -->
-    <div id="split-bar" style="display:none;position:absolute;top:0;bottom:0;width:2px;background:var(--acc2);cursor:ew-resize;z-index:8;">
-      <div style="position:absolute;top:50%;left:-8px;width:18px;height:28px;border-radius:4px;background:var(--bg2);border:1px solid var(--acc);display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--acc2);transform:translateY(-50%);user-select:none;pointer-events:none;">↔</div>
+    <div id="split-bar" onmousedown="startSplitDrag(event)" style="display:none;position:absolute;top:0;width:24px;margin-left:-12px;cursor:ew-resize;z-index:20;user-select:none;">
+      <div style="position:absolute;top:0;bottom:0;left:11px;width:2px;background:var(--acc2);box-shadow:0 0 6px rgba(108,92,231,.7);pointer-events:none;"></div>
+      <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:22px;height:32px;border-radius:5px;background:var(--bg2);border:1.5px solid var(--acc2);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--acc2);box-shadow:0 2px 8px rgba(0,0,0,.6);pointer-events:none;">↔</div>
     </div>
     <div id="drop-hint">
       <div class="dh-hex">⬡</div>
@@ -703,18 +704,29 @@ const PALETTES=[
 const EFX={
 // ── GLITCH ──────────────────────────────────────────────────
   scanline_tear:{cat:'glitch',name:'Scanline Tear',
-    desc:'Randomly offsets horizontal scanlines, simulating corrupted VHS tape or CRT signal loss.',
-    math:'x′=x+offset(seed,y), offset gated by frequency threshold',
+    desc:'Randomly offsets horizontal scanlines simulating VHS/CRT signal loss. Dir bias controls left vs right tearing (0=all left, 0.5=balanced, 1=all right).',
+    math:'x′=x+dir(bias)·offset(intensity), gated by frequency threshold',
     presets:[{name:'subtle',p:{intensity:8,freq:8,bias:.5,seed:1}},{name:'medium',p:{intensity:22,freq:20,bias:.5,seed:42}},{name:'heavy',p:{intensity:60,freq:40,bias:.8,seed:77}},{name:'sparse',p:{intensity:45,freq:4,bias:.6,seed:13}}],
     params:[
     {id:'intensity',label:'intensity',min:0,max:80,step:.5,def:22},
     {id:'freq',label:'frequency',min:1,max:100,step:1,def:20},
-    {id:'bias',label:'bias',min:0,max:1,step:.01,def:.5},
+    {id:'bias',label:'dir bias (0=L 1=R)',min:0,max:1,step:.01,def:.5},
     {id:'seed',label:'seed',min:0,max:999,step:1,def:42},
   ],fn(src,p){
     const{width:w,height:h}=src;const dst=mkId(w,h);dst.data.set(src.data);
     let s=p.seed|0;const rn=()=>{s=(s*1664525+1013904223)&0xffffffff;return(s>>>0)/4294967295;};
-    for(let y=0;y<h;y++){if(rn()*100<p.freq){const off=Math.floor((rn()-.5)*2*p.intensity);for(let x=0;x<w;x++){const sx=Math.max(0,Math.min(w-1,x+off));const si=(y*w+sx)*4,di=(y*w+x)*4;for(let k=0;k<3;k++)dst.data[di+k]=src.data[si+k];}}}
+    const b=p.bias!==undefined?p.bias:0.5;
+    for(let y=0;y<h;y++){
+      if(rn()*100<p.freq){
+        const dir=rn()<b?1:-1;
+        const off=Math.round(dir*rn()*p.intensity);
+        for(let x=0;x<w;x++){
+          const sx=Math.max(0,Math.min(w-1,x+off));
+          const si=(y*w+sx)*4,di=(y*w+x)*4;
+          for(let k=0;k<3;k++)dst.data[di+k]=src.data[si+k];
+        }
+      }
+    }
     return dst;
   }},
   channel_shift:{cat:'glitch',name:'Channel Shift',
@@ -952,8 +964,9 @@ const EFX={
     {id:'ch',label:'channel 1=R 2=G 3=B',min:1,max:3,step:1,def:1},
   ],fn(src,p){
     const{width:w,height:h}=src;const dst=mkId(w,h);dst.data.set(src.data);const ch=(p.ch|0)-1;
-    if(p.dir<.5){for(let y=0;y<h;y++){let last=src.data[(y*w)*4+ch];for(let x=0;x<w;x++){const i=(y*w+x)*4;last=last*.9+src.data[i+ch]*.1;dst.data[i+ch]=clamp(last);}}}
-    else{for(let x=0;x<w;x++){let last=src.data[x*4+ch];for(let y=0;y<h;y++){const i=(y*w+x)*4;last=last*.9+src.data[i+ch]*.1;dst.data[i+ch]=clamp(last);}}}
+    const decay=Math.max(0.01,Math.min(0.99,1-1/Math.max(1,p.len||20)));const feed=1-decay;
+    if(p.dir<.5){for(let y=0;y<h;y++){let last=src.data[(y*w)*4+ch];for(let x=0;x<w;x++){const i=(y*w+x)*4;last=last*decay+src.data[i+ch]*feed;dst.data[i+ch]=clamp(last);}}}
+    else{for(let x=0;x<w;x++){let last=src.data[x*4+ch];for(let y=0;y<h;y++){const i=(y*w+x)*4;last=last*decay+src.data[i+ch]*feed;dst.data[i+ch]=clamp(last);}}}
     return dst;
   }},
 // ── MIRROR ──────────────────────────────────────────────────
@@ -993,7 +1006,8 @@ const EFX={
     {id:'rot',label:'rotation',min:0,max:6.28,step:.05,def:0},
   ],fn(src,p){
     const{width:w,height:h}=src;const dst=mkId(w,h);
-    for(let y=0;y<h;y++)for(let x=0;x<w;x++){let nx=((x/w-.5)*p.sx+.5),ny=((y/h-.5)*p.sy+.5);nx=((nx%1)+1)%1;ny=((ny%1)+1)%1;if(Math.floor((x/w)*p.sx)%2===1)nx=1-nx;if(Math.floor((y/h)*p.sy)%2===1)ny=1-ny;const[rv,gv,bv]=bl(src.data,w,h,nx*w,ny*h);sp(dst.data,w,x,y,rv,gv,bv);}
+    const cos=Math.cos(p.rot||0),sin=Math.sin(p.rot||0);
+    for(let y=0;y<h;y++)for(let x=0;x<w;x++){let rx=x/w-.5,ry=y/h-.5;if(p.rot){const tx=rx*cos-ry*sin;ry=rx*sin+ry*cos;rx=tx;}let nx=rx*p.sx+.5,ny=ry*p.sy+.5;nx=((nx%1)+1)%1;ny=((ny%1)+1)%1;if(Math.floor((x/w)*p.sx)%2===1)nx=1-nx;if(Math.floor((y/h)*p.sy)%2===1)ny=1-ny;const[rv,gv,bv]=bl(src.data,w,h,nx*w,ny*h);sp(dst.data,w,x,y,rv,gv,bv);}
     return dst;
   }},
   droste:{cat:'mirror',name:'Droste Spiral',params:[
@@ -1035,7 +1049,11 @@ const EFX={
     {id:'axis',label:'axis 0=H 1=V',min:0,max:1,step:1,def:0},
   ],fn(src,p){
     const{width:w,height:h}=src;const dst=mkId(w,h);dst.data.set(src.data);
-    for(let y=0;y<h;y++){const row=[];for(let x=0;x<w;x++){const i=(y*w+x)*4;const[hv]=rgb2hsl(dst.data[i],dst.data[i+1],dst.data[i+2]);row.push({x,h:hv,rgb:[dst.data[i],dst.data[i+1],dst.data[i+2]]});}let seg=[];for(const px2 of row){if(px2.h*360>p.threshold)seg.push(px2);else if(seg.length){seg.sort((a,b)=>a.h-b.h);seg.forEach((pp,j)=>{const i=(y*w+seg[0].x+j)*4;[dst.data[i],dst.data[i+1],dst.data[i+2]]=pp.rgb;});seg=[];}}};
+    if(p.axis<.5){
+      for(let y=0;y<h;y++){const row=[];for(let x=0;x<w;x++){const i=(y*w+x)*4;const[hv]=rgb2hsl(dst.data[i],dst.data[i+1],dst.data[i+2]);row.push({x,h:hv,rgb:[dst.data[i],dst.data[i+1],dst.data[i+2]]});}let seg=[];for(const px2 of row){if(px2.h*360>p.threshold)seg.push(px2);else if(seg.length){seg.sort((a,b)=>a.h-b.h);seg.forEach((pp,j)=>{const i=(y*w+seg[0].x+j)*4;[dst.data[i],dst.data[i+1],dst.data[i+2]]=pp.rgb;});seg=[];}}}
+    }else{
+      for(let x=0;x<w;x++){const col=[];for(let y=0;y<h;y++){const i=(y*w+x)*4;const[hv]=rgb2hsl(dst.data[i],dst.data[i+1],dst.data[i+2]);col.push({y,h:hv,rgb:[dst.data[i],dst.data[i+1],dst.data[i+2]]});}let seg=[];for(const px2 of col){if(px2.h*360>p.threshold)seg.push(px2);else if(seg.length){seg.sort((a,b)=>a.h-b.h);seg.forEach((pp,j)=>{const i=((seg[0].y+j)*w+x)*4;[dst.data[i],dst.data[i+1],dst.data[i+2]]=pp.rgb;});seg=[];}}}
+    }
     return dst;
   }},
   pixelate:{cat:'pixel',name:'Pixelate',
@@ -1056,8 +1074,14 @@ const EFX={
   ],fn(src,p){
     const{width:w,height:h}=src;const dst=mkId(w,h);
     for(let i=0;i<dst.data.length;i+=4){dst.data[i]=dst.data[i+1]=dst.data[i+2]=255;dst.data[i+3]=255;}
-    const s=p.size;
-    for(let y=0;y<h;y+=s)for(let x=0;x<w;x+=s){const cx2=x+s/2,cy2=y+s/2;const[r,g,b]=px(src.data,w,h,cx2,cy2);const l=luma(r,g,b)/255;const rad=s/2*(p.invert>.5?l:1-l);for(let dy=-s;dy<s;dy++)for(let dx=-s;dx<s;dx++){if(dx*dx+dy*dy<=rad*rad)sp(dst.data,w,cx2+dx,cy2+dy,0,0,0);}}
+    const s=Math.max(2,p.size|0);const ang=(p.angle||0)*Math.PI/180;
+    const cos=Math.cos(ang),sin=Math.sin(ang);const diag=Math.hypot(w,h);
+    for(let y=-diag;y<diag;y+=s)for(let x=-diag;x<diag;x+=s){
+      const cx2=Math.round(w/2+x*cos-y*sin),cy2=Math.round(h/2+x*sin+y*cos);
+      if(cx2<-s||cx2>w+s||cy2<-s||cy2>h+s)continue;
+      const[r,g,b]=px(src.data,w,h,cx2,cy2);const l=luma(r,g,b)/255;const rad=s/2*(p.invert>.5?l:1-l);
+      for(let dy=-s;dy<s;dy++)for(let dx=-s;dx<s;dx++){if(dx*dx+dy*dy<=rad*rad)sp(dst.data,w,cx2+dx,cy2+dy,0,0,0);}
+    }
     return dst;
   }},
   bayer_dither:{cat:'pixel',name:'Bayer Dither',params:[
@@ -1286,7 +1310,15 @@ const EFX={
     {id:'rotY',label:'yaw',min:-3.14,max:3.14,step:.05,def:0},
   ],fn(src,p){
     const{width:w,height:h}=src;const dst=mkId(w,h);
-    for(let y=0;y<h;y++)for(let x=0;x<w;x++){const nx=(x/w-.5)*p.fov*2,ny=(y/h-.5)*p.fov*2;const cy2=Math.cos(p.rotY),sy=Math.sin(p.rotY);const u=((Math.atan2(nx,cy2+.001)+Math.PI)/(2*Math.PI))*w,v=((Math.asin(Math.max(-1,Math.min(1,ny)))/Math.PI)+.5)*h;const[rv,gv,bv]=bl(src.data,w,h,u,v);sp(dst.data,w,x,y,rv,gv,bv);}
+    const cx1=Math.cos(p.rotX||0),sx1=Math.sin(p.rotX||0);
+    const cy2=Math.cos(p.rotY||0),sy2=Math.sin(p.rotY||0);
+    for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+      let nx=(x/w-.5)*p.fov*2,ny=(y/h-.5)*p.fov*2;
+      const py=ny*cx1-sx1,pz=ny*sx1+cx1;
+      const px2=nx*cy2+pz*sy2;
+      const u=((Math.atan2(px2,pz+.001)+Math.PI)/(2*Math.PI))*w,v=((Math.asin(Math.max(-1,Math.min(1,py)))/Math.PI)+.5)*h;
+      const[rv,gv,bv]=bl(src.data,w,h,u,v);sp(dst.data,w,x,y,rv,gv,bv);
+    }
     return dst;
   }},
 // ── FRACTAL ─────────────────────────────────────────────────
@@ -1344,7 +1376,8 @@ const EFX={
     {id:'zoom',label:'zoom',min:.1,max:2,step:.05,def:.8},
   ],fn(src,p2){
     const{width:w,height:h}=src;const dst=mkId(w,h);const sc=p2.zoom*Math.min(w,h)/2;
-    for(let y=0;y<h;y++)for(let x=0;x<w;x++){const dx=(x-w/2)/sc,dy=(y-h/2)/sc;if(dx*dx+dy*dy>=1){sp(dst.data,w,x,y,0,0,0);continue;}let ur=dx,ui=dy;for(let i=0;i<8;i++){const r3=ur*ur+ui*ui;if(r3>1){const inv=1/r3;ur=ur*inv;ui=-ui*inv;}const rot=2*Math.PI/p2.p,ang=Math.atan2(ui,ur),na=((ang%rot)+rot)%rot,len=Math.sqrt(r3);ur=len*Math.cos(na);ui=len*Math.sin(na);}const[rv,gv,bv]=bl(src.data,w,h,(ur*.5+.5)*w,(ui*.5+.5)*h);sp(dst.data,w,x,y,rv,gv,bv);}
+    const iters=Math.max(4,Math.min(12,Math.round((p2.q||5)*1.5)));
+    for(let y=0;y<h;y++)for(let x=0;x<w;x++){const dx=(x-w/2)/sc,dy=(y-h/2)/sc;if(dx*dx+dy*dy>=1){sp(dst.data,w,x,y,0,0,0);continue;}let ur=dx,ui=dy;for(let i=0;i<iters;i++){const r3=ur*ur+ui*ui;if(r3>1){const inv=1/r3;ur=ur*inv;ui=-ui*inv;}const rot=2*Math.PI/p2.p,ang=Math.atan2(ui,ur),na=((ang%rot)+rot)%rot,len=Math.sqrt(r3);ur=len*Math.cos(na);ui=len*Math.sin(na);}const[rv,gv,bv]=bl(src.data,w,h,(ur*.5+.5)*w,(ui*.5+.5)*h);sp(dst.data,w,x,y,rv,gv,bv);}
     return dst;
   }},
   reaction_warp:{cat:'fractal',name:'Reaction Diffusion',params:[
@@ -2390,16 +2423,27 @@ function setFTool(t,el){
   area.style.cursor=t==='pan'?'grab':t==='crop'?'crosshair':'default';
   if(t!=='crop'){document.getElementById('crop-rect').style.display='none';ST._cropRect=null;}
 }
+function startSplitDrag(e){
+  if(ST.view!=='split'||!ST.img)return;
+  e.preventDefault();
+  e.stopPropagation();
+  ST._splitDragging=true;
+  document.body.style.cursor='ew-resize';
+  document.getElementById('cvs-area').style.cursor='ew-resize';
+  const bar=document.getElementById('split-bar');
+  if(bar)bar.classList.add('dragging');
+}
 function cvMDown(e){
   if(e.target.classList.contains('ftool'))return;
   if(ST.view==='split'&&ST.img){
-    const area=document.getElementById('cvs-area');
-    const cvs=document.getElementById('main-cvs');
-    const aw=area.clientWidth;
-    const baseX=(aw-cvs.width*VP.zoom)/2+VP.panX;
-    const barX=baseX+ST.imgW*ST.splitPos*VP.zoom;
-    if(Math.abs(e.clientX-barX)<15){
-      ST._splitDragging=true;
+    if(e.target.closest('#split-bar')){
+      startSplitDrag(e);
+      return;
+    }
+    const pos=canvasToImage(e);
+    const splitImgX=ST.imgW*ST.splitPos;
+    if(Math.abs(pos.x-splitImgX)*VP.zoom<20){
+      startSplitDrag(e);
       return;
     }
   }
@@ -2420,12 +2464,8 @@ function cvMDown(e){
 }
 function cvMMove(e){
   if(ST._splitDragging&&ST.img){
-    const area=document.getElementById('cvs-area');
-    const cvs=document.getElementById('main-cvs');
-    const aw=area.clientWidth;
-    const baseX=(aw-cvs.width*VP.zoom)/2+VP.panX;
-    const imgX=(e.clientX-baseX)/VP.zoom;
-    ST.splitPos=Math.max(0,Math.min(1,imgX/ST.imgW));
+    const pos=canvasToImage(e);
+    ST.splitPos=Math.max(0,Math.min(1,pos.x/ST.imgW));
     renderCurrentView();
     return;
   }
@@ -2451,7 +2491,13 @@ function cvMMove(e){
   }
 }
 function cvMUp(e){
-  if(ST._splitDragging){ST._splitDragging=false;}
+  if(ST._splitDragging){
+    ST._splitDragging=false;
+    document.body.style.cursor='';
+    document.getElementById('cvs-area').style.cursor=_activeTool==='pan'?'grab':ST._spacePanning?'grab':_activeTool==='crop'?'crosshair':'default';
+    const bar=document.getElementById('split-bar');
+    if(bar)bar.classList.remove('dragging');
+  }
   if(VP.panning){VP.panning=false;document.getElementById('cvs-area').style.cursor=_activeTool==='pan'?'grab':ST._spacePanning?'grab':'default';}
   if(ST._cropDragging){ST._cropDragging=false;updateCropPreview();}
   if(ST._xyDragging){ST._xyDragging=false;}
@@ -2937,6 +2983,12 @@ window.addEventListener('keyup',e=>{
     ST._spacePanning=false;
     document.getElementById('cvs-area').style.cursor=_activeTool==='pan'?'grab':_activeTool==='crop'?'crosshair':'default';
   }
+});
+window.addEventListener('mousemove',e=>{
+  if(ST._splitDragging)cvMMove(e);
+});
+window.addEventListener('mouseup',e=>{
+  if(ST._splitDragging)cvMUp(e);
 });
 
 // ═══════════════════════ INIT ════════════════════════════════

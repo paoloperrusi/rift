@@ -1,131 +1,123 @@
 ================================================================================
-                       RIFT — IMAGE FRACTURE & GLITCH TOOL
-                                 USER GUIDE
+                                RIFT USER GUIDE
+                     Recursive Image Fracture & Transform Tool
 ================================================================================
 
-OVERVIEW
---------
-RIFT is an in-browser creative tool for generative glitch art, digital 
-distortion, procedural image synthesis, and photographic destruction. It runs 
-100% client-side via HTML5 Canvas with zero external dependencies.
+RIFT is a high-performance in-browser image manipulation, glitch art, generative
+synthesis, and distortion studio. All processing runs 100% client-side via HTML5
+Canvas and direct pixel manipulation (ImageData).
 
+--------------------------------------------------------------------------------
+1. GETTING STARTED
+--------------------------------------------------------------------------------
+- OPEN IMAGE: Click "open image" in the topbar, drag & drop an image onto the
+  canvas, or click "✦ load demo image" on the welcome screen.
+- GENERATORS: You can also start without an image! Select any effect under the
+  "GENERATOR" category in the left sidebar and click "⬡ generate".
+- VIEW MODES:
+  * "original": View the untouched source image.
+  * "result": View the processed image with the active effect and adjustments.
+  * "split": Interactive before/after split comparison. Click and drag the
+    center vertical divider (or the ↔ handle) left/right to compare original
+    and processed sides.
 
-WORKSPACE LAYOUT
-----------------
-1. TOP TITLEBAR
-   • Open / Export: Load images (or click "Demo Image" in drop zone), export PNG 
-     at 1x, 2x, or 4x resolution.
-   • History: Undo (Ctrl+Z) and Redo (Ctrl+Y) buttons to roll back or re-apply 
-     any committed operations.
-   • View Controls: Fit to screen, 1:1 actual pixels, or enter custom zoom %.
-   • Reset / Commit / Apply:
-     - Apply: Renders current effect parameters.
-     - Commit: Bakes the current result into the working source image.
-     - Reset: Restores image to the state before uncommitted previews.
+--------------------------------------------------------------------------------
+2. EFFECT PARAMETERS & "BIAS" EXPLAINED
+--------------------------------------------------------------------------------
+Selecting any effect in the left sidebar opens its parameter controls in the
+right panel.
 
-2. LEFT SIDEBAR (EFFECTS & PRESETS)
-   • Search Bar: Instant live search across all 50+ effects and generators.
-   • Effects Tab: Organized by category:
-     - Glitch: Scanline Tear, Channel Shift, Block Shuffle, Pixel Scatter,
-       JPEG Artifact, Data Reinterpret, Word Corrupt, Row Duplicate.
-     - Distort: Wave Distortion, Twirl/Swirl, Polar Inversion, Pinch/Bulge,
-       Ripple, Shear/Skew.
-     - Corrupt: Bitplane Isolate, Bitwise XOR, Noise Injection, Echo/Ghost,
-       Color Bleed.
-     - Mirror: Mirror H, Mirror V, Kaleidoscope, Tile Mirror, Droste Spiral,
-       Radial Tile.
-     - Pixel: Luminance Sort, Hue Sort, Pixelate, Halftone, Bayer Dither.
-     - Color: Hue Rotation, Palette Crush, False Color, Channel Swap, Invert,
-       Threshold.
-     - Art: Floyd-Steinberg Dither, Emboss, Oil Paint, Voronoi Shatter,
-       Stipple, ASCII Art.
-     - Geometry: Möbius Transform, Log-Polar Spiral, Affine Tile, Conformal zⁿ,
-       Perspective Warp, Wallpaper Groups.
-     - 3D: Sphere Wrap, Bump Map, Parallax Depth, Glass Refraction, Depth of
-       Field, Cube Face Map.
-     - Fractal: Mandelbrot Lens, Julia Warp, Newton Warp, IFS Warp,
-       Hyperbolic Tile, Reaction Diffusion.
-     - Generator: Standalone procedural pattern generators (Perlin Noise,
-       Voronoi Field, Gray-Scott, Plasma, Mandelbrot, Julia, Newton, L-System,
-       Flow Field, Truchet, Wave Interference, Spirograph, Lissajous, Attractor).
-   • Presets Tab: One-click aesthetic recipes (Vaporwave, Deep Glitch, CRT
-     Damage, Crystallize, Fractal Dream, etc.) and custom saved user presets.
+* FEATURE SPOTLIGHT: SCANLINE TEAR
+  - Simulates corrupted VHS tracking, CRT signal loss, or unstable sync pulses
+    by randomly displacing horizontal rows of pixels.
+  - Parameters:
+    1. intensity (0 to 80):
+       Maximum horizontal offset in pixels. Larger values create deeper, more
+       dramatic tears across the screen.
+    2. frequency (1 to 100):
+       Density of affected scanlines (percentage of scanlines that experience
+       tearing). Low values create occasional glitches; high values shred the
+       whole image.
+    3. dir bias (0 = All Left, 0.5 = Balanced, 1 = All Right):
+       Controls the directional skew of the glitch displacement.
+       * bias = 0.5: Displacements are equally distributed left and right.
+       * bias > 0.5: Glitch tears pull predominantly to the RIGHT (at 1.0, 100%
+         of tears displace rightwards).
+       * bias < 0.5: Glitch tears pull predominantly to the LEFT (at 0.0, 100%
+         of tears displace leftwards).
+    4. seed (0 to 999):
+       Random number generator seed. Change to explore different tear patterns
+       with identical intensity and frequency settings.
 
-3. CENTER CANVAS VIEWPORT
-   • View Modes:
-     - Original: View unedited source.
-     - Result: View transformed output.
-     - Split: Interactive before/after split slider across the canvas.
-   • Navigation:
-     - Mouse Wheel: Zoom in and out anchored at cursor position.
-     - Spacebar + Drag (or Pan tool): Smooth panning across the canvas.
-     - Floating Toolbar: Select / XY Mapper (↖), Pan (✥), Crop (⬚).
-   • XY Interactive Mapper:
-     Click the 'X' or 'Y' icon on any parameter slider to map mouse drag on the
-     canvas directly to that parameter in real time!
-   • Crop Tool:
-     Select crop tool (⬚), drag a region on the canvas, choose fixed or free
-     aspect ratio, and press Enter or click Commit Crop.
+* INTERACTIVE SLIDERS:
+  - Drag the slider thumb or click anywhere along the track.
+  - The colored bar indicates value and direction (red for negative values,
+    purple for positive values).
+  - Click any numeric value label to directly type an exact number.
 
-4. SEQUENCE CHAIN (BOTTOM STRIP)
-   • Chain multiple effects sequentially:
-     1. Choose an effect and adjust its parameters.
-     2. Click '+' on the sequence strip to add it.
-     3. Click '▶ run' to apply all chained effects in order.
-     4. Click '↻ cycle' to loop live animations through the sequence steps.
+--------------------------------------------------------------------------------
+3. CANVAS TOOLS & NAVIGATION
+--------------------------------------------------------------------------------
+Floating toolbar at top-left of the canvas:
+- ↖ SELECT / XY MAP:
+  Map mouse movements across the canvas to any effect parameter in real time!
+  Click the [X] or [Y] badge next to any parameter in the right panel, then drag
+  on the canvas to dynamically modulate the effect.
+- ✥ PAN:
+  Drag to pan around the image. (Shortcut: hold Spacebar + drag anytime).
+- ⬚ CROP:
+  Drag a bounding box over the canvas. Set aspect ratio presets (Free, 1:1,
+  16:9, 4:3, 9:16) in the Adjust tab and click "commit crop" to crop the image.
+- ZOOM:
+  Use Mouse Wheel to zoom in and out smoothly centered on the cursor.
 
-5. RIGHT PANEL TABS
-   • Params:
-     - Live sliders with precise numeric click-to-edit values.
-     - XY Mapping toggles per slider.
-     - Quick Preset chips per effect.
-     - Randomize & Reset parameter buttons.
-   • Adjust:
-     - Geometry: 90° CW/CCW rotation, arbitrary angle, flip H/V.
-     - Resize: Target width/height with aspect ratio lock.
-     - Crop: Live preview and ratio constraints (1:1, 4:3, 16:9, 3:2, A4).
-     - Color & Tone: Brightness, contrast, saturation, hue, temperature, tint,
-       shadows, highlights, gamma, exposure, vibrance.
-     - Lens & Detail: Vignette, film grain, chromatic aberration, sharpen/blur.
-     - Commit Adjustments button to bake color/tone changes into working image.
-   • Mask:
-     - Target effects to specific regions of the image.
-     - Paint / Erase brushes with customizable size, hardness, and opacity.
-     - Fill and Clear mask buttons.
-     - Automatic Luminance Masks (Shadows, Midtones, Highlights).
-     - Edge Detection (Sobel filter) mask generator.
-     - Invert mask.
-     - "Enable Mask" toggle to blend effects through the mask.
-   • Script:
-     - Built-in JavaScript pixel shader editor.
-     - Inspect and fork source code of any native effect with the '</>' button.
-     - Live parameters via `param("name", { min, max, def })`.
-     - Fast helper methods: `ctx.sample(src, x, y)`, `ctx.set(dst, x, y, r, g, b)`,
-       `ctx.noise()`, `ctx.fbm()`, `ctx.palette()`, `ctx.luma()`.
-     - Real-time mini preview, syntax checking, and instant deployment.
-     - Save and load `.rift` script files.
+--------------------------------------------------------------------------------
+4. SPLIT COMPARISON DIVIDER
+--------------------------------------------------------------------------------
+- Switch to "split" mode using the button at the bottom center of the canvas.
+- A glowing vertical divider bar with a [↔] handle appears.
+- Click and drag the handle or divider line left and right:
+  * Left side displays the ORIGINAL image.
+  * Right side displays the PROCESSED image.
+- Works at any zoom level or pan position.
 
+--------------------------------------------------------------------------------
+5. LIVE MASKING
+--------------------------------------------------------------------------------
+The "mask" tab in the right panel allows selective effect application:
+- Toggle "enable mask" to blend effects selectively.
+- Brush tools: Paint, Erase, or Fill All with customizable brush size, hardness,
+  and opacity.
+- Luma selections: Generate instant masks from Shadows, Midtones, or Highlights.
+- Sobel edge detection: Automatically mask high-contrast edges and outlines.
 
-KEYBOARD SHORTCUTS
-------------------
-• Space + Drag       Pan canvas
-• Wheel              Zoom in / out at cursor
-• Z                  Zoom to fit
-• 1                  Zoom 100% (1:1)
-• Ctrl+Z / Cmd+Z     Undo last commit / crop / adjust
-• Ctrl+Y / Cmd+Y     Redo
-• O                  Open image file
-• S                  Export PNG
-• Enter (in Crop)    Commit crop
-• Escape             Cancel crop / close dialogs
+--------------------------------------------------------------------------------
+6. ADJUSTMENTS & CROPPING
+--------------------------------------------------------------------------------
+The "adjust" tab provides non-destructive photography grading:
+- Color: Brightness, Contrast, Saturation, Hue, Temperature, Tint, Shadows,
+  Highlights, Gamma, Exposure, Vibrance.
+- Lens: Vignette, Film Grain, Chromatic Aberration.
+- Detail: Unsharp mask, Edge sharpen, Gaussian blur.
+- Geometry: Free-angle rotation with fill modes, horizontal/vertical flip.
+- Click "commit adjustments" to bake adjustments into the source image.
 
+--------------------------------------------------------------------------------
+7. SCRIPTING / CUSTOM SHADERS
+--------------------------------------------------------------------------------
+The "script" tab provides a live JavaScript pixel manipulation sandbox:
+- Inspect the source code of any built-in effect by clicking "</>" next to its
+  name in the sidebar.
+- Write custom algorithms using `src` and `dst` ImageData buffers.
+- Deploy scripts directly into the active viewport.
 
-TIPS FOR BEST GLITCH RESULTS
-----------------------------
-1. Layering: Commit a subtle distortion (e.g. Wave Distortion or JPEG Artifact),
-   then apply Pixel Sorting on top for dramatic digital fragmentation.
-2. Targeted Glitches: Use the Mask tab's "Luma: Highlights" to constrain
-   Channel Shift or Scanline Tear only to bright highlights.
-3. Live Experimentation: Map X to 'intensity' and Y to 'frequency' in Scanline
-   Tear, then drag across the canvas for tactile performative glitching.
+--------------------------------------------------------------------------------
+8. SHORTCUTS QUICK REFERENCE
+--------------------------------------------------------------------------------
+- Ctrl + Z / Cmd + Z : Undo previous bake / adjustment / crop
+- Ctrl + Y / Cmd + Y : Redo
+- Space + Drag       : Pan canvas
+- Mouse Wheel        : Zoom in / Zoom out
+- Ctrl + S           : Export PNG
+- Escape             : Close open modals / cancel active crop
 ================================================================================
