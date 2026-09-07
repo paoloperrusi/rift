@@ -1774,8 +1774,9 @@ function renderParams(ef,key){
   // per-effect presets
   if(ef.presets&&ef.presets.length){
     h+=`<div class="eff-presets"><div class="eff-pset-title">quick presets</div><div class="eff-pset-row">`;
-    for(const pr of ef.presets){
-      h+=`<div class="eff-pchip" onclick="applyEffPreset(${JSON.stringify(JSON.stringify(pr.p))})" title="${Object.entries(pr.p).map(([k,v])=>k+': '+v).join(', ')}">${pr.name}</div>`;
+    for(let i=0;i<ef.presets.length;i++){
+      const pr=ef.presets[i];
+      h+=`<div class="eff-pchip" onclick="applyEffPresetIdx(${i})" title="${Object.entries(pr.p).map(([k,v])=>k+': '+v).join(', ')}">${pr.name}</div>`;
     }
     h+=`</div></div><div class="p-divider" style="margin:0 0 8px"></div>`;
   }
@@ -1826,9 +1827,18 @@ function editParamDirect(id){
   renderParams(ef,ST.activeKey);
   if(GEN[ST.activeKey]) previewGen(); else if(ST.img) previewEff();
 }
+function applyEffPresetIdx(idx){
+  const ef=EFX[ST.activeKey]||GEN[ST.activeKey];
+  if(!ef||!ef.presets||!ef.presets[idx]) return;
+  const pr=ef.presets[idx];
+  for(const[k,v] of Object.entries(pr.p)) if(k in ST.activeParams) ST.activeParams[k]=v;
+  renderParams(ef,ST.activeKey);
+  if(GEN[ST.activeKey]) previewGen(); else if(ST.img) previewEff();
+  toast('preset: '+pr.name,'ok');
+}
 function applyEffPreset(jsonStr){
   try{
-    const p=JSON.parse(jsonStr);
+    const p=typeof jsonStr==='string'?JSON.parse(jsonStr):jsonStr;
     const ef=EFX[ST.activeKey]||GEN[ST.activeKey]; if(!ef) return;
     for(const[k,v] of Object.entries(p)) if(k in ST.activeParams) ST.activeParams[k]=v;
     renderParams(ef,ST.activeKey);
@@ -2170,8 +2180,11 @@ function clearMask(){ST.mask=null;renderMaskCanvas();}
 // ═══════════════════════ PRESETS ═════════════════════════════
 function applyPreset(pr){
   if(!ST.img){toast('load an image first','err');return;}
+  pushHistory('preset: '+(pr.name||''));
   let cur=ST.img;for(const s of pr.steps){const ef=EFX[s.key];if(ef)cur=ef.fn(cur,s.p);}
-  ST.result=cur;loadId(cur,cur.width,cur.height);toast('preset applied: '+(pr.name||''),'ok');
+  ST.result=applyMaskBlend(ST.img,cur);
+  renderCurrentView();
+  toast('preset applied: '+(pr.name||''),'ok');
 }
 function savePreset(){
   const name=document.getElementById('ps-name').value.trim()||('Preset '+Date.now());
