@@ -288,6 +288,7 @@ body.drag-over #cvs-area{outline:2px dashed var(--acc);outline-offset:-6px;}
   <span class="logo-ver">v0.3</span>
   <div class="tb-sep"></div>
   <button class="btn ghost sm" onclick="openImage()">⌘ open</button>
+  <button class="btn ghost sm" onclick="loadDemoImage(event)" title="Load sample test pattern">✦ demo</button>
   <button class="btn ghost sm" onclick="exportImg()">↓ export</button>
   <div class="tb-sep"></div>
   <button class="btn sm" onclick="zoomFit()" title="Fit image to window">fit</button>
@@ -319,9 +320,9 @@ body.drag-over #cvs-area{outline:2px dashed var(--acc);outline-offset:-6px;}
   <button class="btn sm icon-btn" id="btn-undo" onclick="undo()" title="Undo (Ctrl+Z)" disabled>↶</button>
   <button class="btn sm icon-btn" id="btn-redo" onclick="redo()" title="Redo (Ctrl+Y)" disabled>↷</button>
   <div class="tbr">
-    <button class="btn sm" onclick="resetToOrig()" title="Reset preview to current source">↺ reset</button>
-    <button class="btn sm" onclick="commitEffect()" title="Bake effect into working source">✓ commit</button>
-    <button class="btn acc sm" onclick="applyAndPreview()" title="Apply current parameters">▶ apply</button>
+    <button class="btn sm" onclick="resetToOrig()" title="Reset uncommitted preview to current source">↺ reset</button>
+    <button class="btn sm" onclick="revertToInitial()" title="Revert all changes back to pristine original image">⎌ revert original</button>
+    <button class="btn acc sm" onclick="applyEffect()" title="Bake effect into working image (Ctrl+Enter)">✓ apply</button>
   </div>
 </div>
 
@@ -622,7 +623,7 @@ body.drag-over #cvs-area{outline:2px dashed var(--acc);outline-offset:-6px;}
 'use strict';
 // ═══════════════════════════ STATE ═══════════════════════════
 const ST={
-  img:null,imgW:0,imgH:0,
+  img:null,imgW:0,imgH:0,origImg:null,
   result:null,
   activeKey:null,activeParams:{},
   mask:null,maskEnabled:true,
@@ -661,7 +662,6 @@ function undo(){
   loadId(ST.img,ST.imgW,ST.imgH);
   updateHistoryUI();
   toast('undo: '+state.desc,'info');
-  if(ST.activeKey&&!GEN[ST.activeKey])previewEff();
   renderMaskCanvas();
 }
 
@@ -676,7 +676,6 @@ function redo(){
   loadId(ST.img,ST.imgW,ST.imgH);
   updateHistoryUI();
   toast('redo: '+state.desc,'info');
-  if(ST.activeKey&&!GEN[ST.activeKey])previewEff();
   renderMaskCanvas();
 }
 
@@ -1967,23 +1966,35 @@ function runGen(){
   },10);
 }
 
-function applyAndPreview(){
+function applyEffect(){
   if(!ST.img&&!GEN[ST.activeKey]){toast('open an image first','err');return;}
   if(!ST.activeKey){toast('select an effect','err');return;}
   if(GEN[ST.activeKey]){runGen();return;}
   const ef=EFX[ST.activeKey];if(!ef)return;
-  const raw=ef.fn(ST.img,{...ST.activeParams});
-  ST.result=applyMaskBlend(ST.img,raw);
-  renderCurrentView();
+  if(!ST.result){
+    const raw=ef.fn(ST.img,{...ST.activeParams});
+    ST.result=applyMaskBlend(ST.img,raw);
+  }
+  pushHistory('apply '+ef.name);
+  const clone=mkId(ST.result.width,ST.result.height);
+  clone.data.set(ST.result.data);
+  ST.img=clone;ST.imgW=clone.width;ST.imgH=clone.height;
+  loadId(ST.img,ST.imgW,ST.imgH);
   toast('applied: '+ef.name,'ok');
 }
+const commitEffect=applyEffect;
+const applyAndPreview=applyEffect;
 
-function commitEffect(){
-  if(!ST.result){toast('nothing to commit','err');return;}
-  pushHistory('commit '+(EFX[ST.activeKey]?.name||'effect'));
-  ST.img=ST.result;ST.imgW=ST.result.width;ST.imgH=ST.result.height;
+function revertToInitial(){
+  const base=ST.origImg||ST.history[0]?.img;
+  if(!base){toast('no initial image to revert to','err');return;}
+  pushHistory('revert to original');
+  const clone=mkId(base.width,base.height);
+  clone.data.set(base.data);
+  ST.img=clone;ST.imgW=base.width;ST.imgH=base.height;ST.result=clone;
   loadId(ST.img,ST.imgW,ST.imgH);
-  toast('committed to working source','ok');
+  renderCurrentView();
+  toast('reverted to original image','info');
 }
 
 function showOnCanvas(id){loadId(id,id.width,id.height);}
@@ -2001,7 +2012,7 @@ function resetToOrig(){
   if(!ST.img)return;
   ST.result=ST.img;
   renderCurrentView();
-  toast('preview reset to source','info');
+  toast('preview reset to current source','info');
 }
 
 function loadDemoImage(e){
@@ -2043,12 +2054,14 @@ function loadDemoImage(e){
   ctx.fillText('800×600 RGBA · GENERATIVE HARMONIC CARD',w/2,h/2+150);
   
   const id=ctx.getImageData(0,0,w,h);
-  pushHistory('demo image');
+  const orig=mkId(w,h);orig.data.set(id.data);
+  ST.origImg=orig;
   ST.img=id;ST.imgW=w;ST.imgH=h;ST.result=id;ST.mask=null;
+  ST.history=[];ST.historyIndex=-1;
+  pushHistory('demo image');
   loadId(id,w,h);
   zoomFit();
   toast('sample test card loaded','ok');
-  if(ST.activeKey&&!GEN[ST.activeKey])previewEff();
   renderMaskCanvas();
 }
 
@@ -2063,18 +2076,20 @@ function fileChosen(input){
     if(w>MAX||h>MAX){const r=Math.min(MAX/w,MAX/h);w=Math.round(w*r);h=Math.round(h*r);}
     const c=document.createElement('canvas');c.width=w;c.height=h;
     c.getContext('2d').drawImage(img,0,0,w,h);
-    ST.img=c.getContext('2d').getImageData(0,0,w,h);
-    ST.imgW=w; ST.imgH=h; ST.mask=null;
+    const id=c.getContext('2d').getImageData(0,0,w,h);
+    const orig=mkId(w,h);orig.data.set(id.data);
+    ST.origImg=orig;
+    ST.img=id; ST.imgW=w; ST.imgH=h; ST.result=id; ST.mask=null;
+    ST.history=[]; ST.historyIndex=-1;
     URL.revokeObjectURL(url);
     // update resize inputs
     const rw=document.getElementById('adj-rw'); if(rw)rw.value=w;
     const rh2=document.getElementById('adj-rh'); if(rh2)rh2.value=h;
     // show image and fit viewport
     pushHistory('open image');
-    loadId(ST.img,w,h);
+    loadId(id,w,h);
     zoomFit();
     toast('loaded '+w+'×'+h,'ok');
-    if(ST.activeKey&&!GEN[ST.activeKey])previewEff();
     renderMaskCanvas();
   };
   img.src=url;
@@ -3084,6 +3099,8 @@ window.addEventListener('keydown',e=>{
     openImage();
   } else if(e.key.toLowerCase()==='s'&&(e.ctrlKey||e.metaKey)){
     e.preventDefault();exportImg();
+  } else if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){
+    e.preventDefault();applyEffect();
   } else if(e.key==='Enter'){
     if(ST._cropRect&&ST._cropRect.w>0)adjCommitCrop();
   } else if(e.key==='Escape'){
