@@ -220,17 +220,17 @@ input[type=range]::-moz-range-thumb:hover{background:var(--acc3);}
 @keyframes tout{to{opacity:0;transform:translateY(-4px)}}
 
 /* ZOOM / PAN */
-#main-cvs{display:none;position:absolute;top:0;left:0;transform-origin:top left;image-rendering:pixelated;z-index:1;}
-#cvs-area{cursor:crosshair;overflow:hidden;}
+#main-cvs{display:none;position:absolute;top:0;left:0;transform-origin:top left;image-rendering:pixelated;z-index:1;user-select:none;-webkit-user-select:none;-webkit-user-drag:none;pointer-events:none;}
+#cvs-area{cursor:crosshair;overflow:hidden;user-select:none;-webkit-user-select:none;-webkit-user-drag:none;}
 #cvs-area.panning{cursor:grabbing;}
 
 /* XY MAPPER OVERLAY */
-#xy-overlay{display:none;position:absolute;inset:0;z-index:6;cursor:none;}
+#xy-overlay{display:none;position:absolute;inset:0;z-index:6;pointer-events:none;}
 #xy-overlay.active{display:block;}
-.xy-hair-h,.xy-hair-v{position:absolute;background:var(--acc2);opacity:.55;pointer-events:none;}
+.xy-hair-h,.xy-hair-v{display:none;position:absolute;background:var(--acc2);opacity:.65;pointer-events:none;}
 .xy-hair-h{height:1px;width:100%;top:0;left:0;}
 .xy-hair-v{width:1px;height:100%;top:0;left:0;}
-.xy-lbl{position:absolute;font-family:var(--font-mono);font-size:8px;color:var(--acc2);background:rgba(7,7,10,.9);padding:2px 5px;border-radius:3px;pointer-events:none;white-space:nowrap;}
+.xy-lbl{display:none;position:absolute;font-family:var(--font-mono);font-size:8.5px;color:var(--acc2);background:rgba(7,7,10,.92);border:1px solid var(--ln2);padding:2px 6px;border-radius:3px;pointer-events:none;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.5);}
 
 /* TOOLTIP */
 #eff-tt{position:fixed;z-index:500;pointer-events:none;background:rgba(8,8,12,.97);border:1px solid var(--ln2);border-radius:var(--rl);padding:10px 12px;max-width:230px;opacity:0;transition:opacity 200ms;box-shadow:0 8px 32px rgba(0,0,0,.6);}
@@ -331,7 +331,8 @@ body.drag-over #cvs-area{outline:2px dashed var(--acc);outline-offset:-6px;}
     onwheel="cvWheel(event)"
     onmousedown="cvMDown(event)"
     onmousemove="cvMMove(event)"
-    onmouseup="cvMUp(event)">
+    onmouseup="cvMUp(event)"
+    ondragstart="return false;">
     <div class="checker"></div>
     <!-- XY mapper overlay -->
     <div id="xy-overlay">
@@ -360,7 +361,7 @@ body.drag-over #cvs-area{outline:2px dashed var(--acc);outline-offset:-6px;}
       <div class="dh-line2">or pick a generator from the sidebar</div>
       <button class="btn sm" onclick="loadDemoImage(event)" style="margin-top:6px;pointer-events:auto;" title="Generate a rich test card pattern">✦ load demo image</button>
     </div>
-    <canvas id="main-cvs"></canvas>
+    <canvas id="main-cvs" draggable="false" ondragstart="return false;"></canvas>
     <div id="vc">
       <button class="vcb on" onclick="setView('orig',this)">original</button>
       <button class="vcb" onclick="setView('result',this)">result</button>
@@ -2452,12 +2453,14 @@ function promptZoom(){
 // ─── CANVAS MOUSE ────────────────────────────────────────────
 let _activeTool='select';
 function setFTool(t,el){
+  if(_activeTool==='crop'&&t!=='crop'){applyCrop();}
   _activeTool=t;
   document.querySelectorAll('.ftool').forEach(f=>f.classList.remove('on'));
   el.classList.add('on');
   const area=document.getElementById('cvs-area');
   area.style.cursor=t==='pan'?'grab':t==='crop'?'crosshair':'default';
   if(t!=='crop'){document.getElementById('crop-rect').style.display='none';ST._cropRect=null;}
+  if(t!=='select'){hideXYHair();ST._xyDragging=false;}
 }
 function startSplitDrag(e){
   if(ST.view!=='split'||!ST.img)return;
@@ -2470,7 +2473,7 @@ function startSplitDrag(e){
   if(bar)bar.classList.add('dragging');
 }
 function cvMDown(e){
-  if(e.target.classList.contains('ftool'))return;
+  if(e.target.tagName==='BUTTON'||e.target.closest('button')||e.target.classList.contains('ftool')||e.target.closest('#vc'))return;
   if(ST.view==='split'&&ST.img){
     if(e.target.closest('#split-bar')){
       startSplitDrag(e);
@@ -2484,19 +2487,26 @@ function cvMDown(e){
     }
   }
   if(ST._spacePanning||_activeTool==='pan'||(e.button===1)){
+    e.preventDefault();
     VP.panning=true;VP.px0=e.clientX;VP.py0=e.clientY;VP.ox=VP.panX;VP.oy=VP.panY;
     document.getElementById('cvs-area').style.cursor='grabbing';
   } else if(_activeTool==='crop'&&ST.img){
+    e.preventDefault();
     ST._cropDragging=true;
     const pos=canvasToImage(e);
     ST._cropStart={x:Math.max(0,pos.x),y:Math.max(0,pos.y)};
     ST._cropRect={x:ST._cropStart.x,y:ST._cropStart.y,w:0,h:0};
     updateCropRect();
   } else if(_activeTool==='select'&&ST.xyActive){
+    e.preventDefault();
     ST.xyLastX=e.clientX;ST.xyLastY=e.clientY;
     ST._xyDragging=true;
     updateXYHair(e);
-  } else if(!ST.img&&e.target.id==='cvs-area'){ openImage(); }
+  } else if(!ST.img&&e.target.id==='cvs-area'){
+    openImage();
+  } else if(ST.img){
+    e.preventDefault();
+  }
 }
 function cvMMove(e){
   if(ST._splitDragging&&ST.img){
@@ -2534,9 +2544,12 @@ function cvMUp(e){
     const bar=document.getElementById('split-bar');
     if(bar)bar.classList.remove('dragging');
   }
-  if(VP.panning){VP.panning=false;document.getElementById('cvs-area').style.cursor=_activeTool==='pan'?'grab':ST._spacePanning?'grab':'default';}
+  if(VP.panning){VP.panning=false;document.getElementById('cvs-area').style.cursor=_activeTool==='pan'?'grab':ST._spacePanning?'grab':_activeTool==='crop'?'crosshair':'default';}
   if(ST._cropDragging){ST._cropDragging=false;updateCropPreview();}
-  if(ST._xyDragging){ST._xyDragging=false;}
+  if(ST._xyDragging){
+    ST._xyDragging=false;
+    hideXYHair();
+  }
 }
 function canvasToImage(e){
   const area=document.getElementById('cvs-area');
@@ -2884,6 +2897,14 @@ function adjReset(){
 // ─── XY MAPPER ──────────────────────────────────────────────
 Object.assign(ST,{xyParamX:null,xyParamY:null,xyActive:false,xyLastX:0,xyLastY:0,_xyDragging:false,_cropRect:null,_cropDragging:false});
 
+function hideXYHair(){
+  const ov=document.getElementById('xy-overlay');if(ov)ov.classList.remove('active');
+  const h=document.getElementById('xy-h');if(h)h.style.display='none';
+  const v=document.getElementById('xy-v');if(v)v.style.display='none';
+  const lx=document.getElementById('xy-lbl-x');if(lx)lx.style.display='none';
+  const ly=document.getElementById('xy-lbl-y');if(ly)ly.style.display='none';
+}
+
 function toggleXY(axis,id){
   if(axis==='x'){
     ST.xyParamX=ST.xyParamX===id?null:id;
@@ -2895,18 +2916,30 @@ function toggleXY(axis,id){
     if(ST.xyParamY){const el=document.querySelector(`[onclick="toggleXY('y','${id}')"]`);if(el)el.classList.add('on-y');}
   }
   ST.xyActive=!!(ST.xyParamX||ST.xyParamY);
-  const ov=document.getElementById('xy-overlay');
-  if(ov)ov.classList.toggle('active',ST.xyActive);
+  if(!ST.xyActive){
+    hideXYHair();
+  }
 }
 function updateXYHair(e){
   const area=document.getElementById('cvs-area');const rect=area.getBoundingClientRect();
   const mx=e.clientX-rect.left, my=e.clientY-rect.top;
-  const h=document.getElementById('xy-h');if(h)h.style.top=my+'px';
-  const v=document.getElementById('xy-v');if(v)v.style.left=mx+'px';
+  const ov=document.getElementById('xy-overlay');if(ov)ov.classList.add('active');
+  const h=document.getElementById('xy-h');
+  if(h){
+    h.style.display=(ST.xyParamY||ST.xyActive)?'block':'none';
+    h.style.top=my+'px';
+  }
+  const v=document.getElementById('xy-v');
+  if(v){
+    v.style.display=(ST.xyParamX||ST.xyActive)?'block':'none';
+    v.style.left=mx+'px';
+  }
   const lx=document.getElementById('xy-lbl-x');
   const ly=document.getElementById('xy-lbl-y');
   if(ST.xyParamX&&lx){lx.style.display='block';lx.style.left=(mx+12)+'px';lx.style.top=(my-20)+'px';lx.textContent='X→'+ST.xyParamX+': '+((ST.activeParams[ST.xyParamX]||0)).toFixed(2);}
+  else if(lx){lx.style.display='none';}
   if(ST.xyParamY&&ly){ly.style.display='block';ly.style.left=(mx+12)+'px';ly.style.top=(my+4)+'px';ly.textContent='Y→'+ST.xyParamY+': '+((ST.activeParams[ST.xyParamY]||0)).toFixed(2);}
+  else if(ly){ly.style.display='none';}
 }
 function doXYMove(dx,dy){
   const ef=EFX[ST.activeKey]||GEN[ST.activeKey];if(!ef)return;
@@ -3021,10 +3054,16 @@ window.addEventListener('keyup',e=>{
   }
 });
 window.addEventListener('mousemove',e=>{
-  if(ST._splitDragging)cvMMove(e);
+  if(ST._splitDragging||ST._xyDragging||VP.panning||ST._cropDragging)cvMMove(e);
 });
 window.addEventListener('mouseup',e=>{
-  if(ST._splitDragging)cvMUp(e);
+  if(ST._splitDragging||ST._xyDragging||VP.panning||ST._cropDragging)cvMUp(e);
+});
+window.addEventListener('dragstart',e=>{
+  if(e.target&&e.target.closest&&e.target.closest('#cvs-area')){
+    e.preventDefault();
+    return false;
+  }
 });
 
 // ═══════════════════════ INIT ════════════════════════════════
