@@ -211,11 +211,11 @@ input[type=range]::-moz-range-thumb:hover{background:var(--acc3);}
 .mdl-foot{display:flex;gap:6px;justify-content:flex-end;}
 
 /* TOAST */
-#toasts{position:fixed;bottom:13px;right:13px;display:flex;flex-direction:column;gap:4px;z-index:2000;pointer-events:none;}
-.toast{padding:7px 11px;background:var(--bg3);border:1px solid var(--ln2);border-radius:var(--r);font-size:10px;font-family:var(--font-mono);color:var(--t1);animation:tin 180ms ease,tout 180ms ease 2.5s forwards;display:flex;align-items:center;gap:5px;}
-.toast.ok{border-left:2px solid var(--grn);}
-.toast.err{border-left:2px solid var(--red);}
-.toast.info{border-left:2px solid var(--acc);}
+#toasts{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column-reverse;align-items:center;gap:6px;z-index:9999;pointer-events:none;}
+.toast{padding:6px 12px;background:var(--bg2);border:1px solid var(--ln2);border-radius:var(--r);font-size:10px;font-family:var(--font-mono);color:var(--t0);box-shadow:0 4px 16px rgba(0,0,0,0.6);animation:tin 180ms ease,tout 180ms ease 2.2s forwards;display:flex;align-items:center;gap:6px;white-space:nowrap;}
+.toast.ok{border-left:3px solid var(--grn);}
+.toast.err{border-left:3px solid var(--red);}
+.toast.info{border-left:3px solid var(--acc);}
 @keyframes tin{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 @keyframes tout{to{opacity:0;transform:translateY(-4px)}}
 
@@ -259,8 +259,9 @@ select.adj-inp{cursor:pointer;}
 .eff-presets{padding:0 12px 8px;}
 .eff-pset-title{font-family:var(--font-mono);font-size:8px;letter-spacing:.12em;text-transform:uppercase;color:var(--t3);padding:4px 0 3px;}
 .eff-pset-row{display:flex;flex-wrap:wrap;gap:3px;}
-.eff-pchip{height:19px;padding:0 7px;border-radius:3px;background:var(--bg3);border:1px solid var(--ln2);color:var(--t1);font-family:var(--font-mono);font-size:9px;cursor:pointer;display:flex;align-items:center;transition:all var(--ease);white-space:nowrap;}
-.eff-pchip:hover{background:var(--bg5);border-color:var(--ln3);color:var(--t0);}
+.eff-pchip{height:20px;padding:0 8px;border-radius:3px;background:var(--bg3);border:1px solid var(--ln2);color:var(--t1);font-family:var(--font-mono);font-size:9.5px;cursor:pointer;display:flex;align-items:center;transition:all var(--ease);white-space:nowrap;user-select:none;}
+.eff-pchip:hover{background:var(--bg4);border-color:var(--acc2);color:var(--t0);}
+.eff-pchip.on{background:var(--acc);border-color:var(--acc2);color:#fff;font-weight:600;box-shadow:0 0 8px rgba(108,92,231,0.5);}
 
 /* XY mapper icons on sliders */
 .xy-map-icon{width:14px;height:14px;border-radius:2px;background:var(--bg4);border:1px solid var(--ln2);font-family:var(--font-mono);font-size:7px;color:var(--t3);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all var(--ease);flex-shrink:0;}
@@ -833,7 +834,7 @@ const EFX={
     params:[
     {id:'ax',label:'amplitude x',min:0,max:80,step:.5,def:20},
     {id:'ay',label:'amplitude y',min:0,max:80,step:.5,def:20},
-    {id:'fx',label:'frequency x',min:.001,max:.15,step:.001,def:.04},
+    {id:'fx',label:'frequency x',min:0,max:.15,step:.001,def:.04},
     {id:'fy',label:'frequency y',min:.001,max:.15,step:.001,def:.04},
     {id:'phase',label:'phase',min:0,max:6.28,step:.05,def:0},
   ],fn(src,p){
@@ -1099,7 +1100,7 @@ const EFX={
   hue_rotate:{cat:'color',name:'Hue Rotation',
     desc:'Rotates all pixel hues by a fixed angle in HSL colour space, with optional saturation and lightness scaling.',
     math:'H′=(H+Δ) mod 360,  S′=S×sat,  L′=L×lit',
-    presets:[{name:'180°',p:{angle:180,sat:1,lit:1}},{name:'warm',p:{angle:30,sat:1.3,lit:1}},{name:'cold',p:{angle:-60,sat:1.2,lit:1}},{name:'desaturate',p:{angle:0,sat:.1,lit:1}}],
+    presets:[{name:'180°',p:{angle:180,sat:1,lit:1}},{name:'warm',p:{angle:30,sat:1.3,lit:1}},{name:'cold',p:{angle:300,sat:1.2,lit:1}},{name:'desaturate',p:{angle:0,sat:.1,lit:1}}],
     params:[
     {id:'angle',label:'hue shift',min:0,max:360,step:1,def:180},
     {id:'sat',label:'saturation',min:0,max:3,step:.05,def:1},
@@ -1776,7 +1777,9 @@ function renderParams(ef,key){
     h+=`<div class="eff-presets"><div class="eff-pset-title">quick presets</div><div class="eff-pset-row">`;
     for(let i=0;i<ef.presets.length;i++){
       const pr=ef.presets[i];
-      h+=`<div class="eff-pchip" onclick="applyEffPresetIdx(${i})" title="${Object.entries(pr.p).map(([k,v])=>k+': '+v).join(', ')}">${pr.name}</div>`;
+      const isMatch=Object.entries(pr.p).every(([k,val])=>Math.abs((ST.activeParams[k]??0)-val)<0.01);
+      const onCls=isMatch?' on':'';
+      h+=`<div class="eff-pchip${onCls}" onclick="applyEffPresetIdx(${i})" title="${Object.entries(pr.p).map(([k,v])=>k+': '+v).join(', ')}">${pr.name}</div>`;
     }
     h+=`</div></div><div class="p-divider" style="margin:0 0 8px"></div>`;
   }
@@ -2379,7 +2382,27 @@ function riftChosen(input){
 // ═══════════════════════ MODAL / TOAST ═══════════════════════
 function openModal(id){document.getElementById(id).classList.add('open');}
 function closeModal(id){document.getElementById(id).classList.remove('open');}
-function toast(msg,type='info'){const area=document.getElementById('toasts');const el=document.createElement('div');el.className='toast '+type;el.textContent=msg;area.appendChild(el);setTimeout(()=>el.remove(),2800);}
+function toast(msg,type='info'){
+  const area=document.getElementById('toasts');
+  if(!area)return;
+  for(const child of [...(area.children||[])]){
+    if(child.dataset&&child.dataset.msg===msg){
+      child.style.animation='none';
+      child.offsetHeight;
+      child.style.animation='tin 180ms ease,tout 180ms ease 2.2s forwards';
+      return;
+    }
+  }
+  while(area.children&&area.children.length>=3){
+    area.children[0].remove();
+  }
+  const el=document.createElement('div');
+  el.className='toast '+type;
+  el.dataset.msg=msg;
+  el.textContent=msg;
+  area.appendChild(el);
+  setTimeout(()=>{if(el.parentNode)el.remove();},2400);
+}
 
 
 // ═══════════════════ ZOOM / PAN ══════════════════════════════
