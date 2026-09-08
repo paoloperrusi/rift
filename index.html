@@ -93,7 +93,7 @@ body{font-family:var(--font-ui);font-size:13px;display:flex;flex-direction:colum
 @keyframes breathe{0%,100%{opacity:.2;transform:scale(1)}50%{opacity:.35;transform:scale(1.05)}}
 /* #main-cvs base rule — overridden by zoom/pan CSS below */
 
-#vc{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);display:flex;background:rgba(14,14,19,.9);border:1px solid var(--ln2);border-radius:var(--r);padding:3px;gap:2px;z-index:10;backdrop-filter:blur(4px);}
+#vc{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);display:flex;background:rgba(14,14,19,.95);border:1px solid var(--ln2);border-radius:var(--r);padding:3px;gap:2px;z-index:50;backdrop-filter:blur(8px);box-shadow:0 4px 16px rgba(0,0,0,0.5);}
 .vcb{height:22px;padding:0 9px;background:transparent;border:none;border-radius:3px;color:var(--t2);font-size:10px;font-family:var(--font-mono);cursor:pointer;transition:all var(--ease);letter-spacing:.04em;display:inline-flex;align-items:center;justify-content:center;line-height:1;}
 .vcb:hover{background:var(--bg4);color:var(--t1);}
 .vcb.on{background:var(--bg5);color:var(--t0);}
@@ -291,22 +291,43 @@ body.drag-over #cvs-area{outline:2px dashed var(--acc);outline-offset:-6px;}
   <button class="btn ghost sm" onclick="loadDemoImage(event)" title="Load sample test pattern">✦ demo</button>
   <button class="btn ghost sm" onclick="exportImg()">↓ export</button>
   <div class="tb-sep"></div>
-  <button class="btn sm" onclick="zoomFit()" title="Fit image to window">fit</button>
-  <button class="btn sm" onclick="zoom100()" title="100% actual pixels">1:1</button>
+  <button class="btn sm icon-btn" onclick="zoomFit()" title="Fit image to window (Z)">
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M2 5V2.5A.5.5 0 0 1 2.5 2H5M11 2h2.5a.5.5 0 0 1 .5.5V5M14 11v2.5a.5.5 0 0 1-.5.5H11M5 14H2.5a.5.5 0 0 1-.5-.5V11"/>
+    </svg>
+  </button>
+  <button class="btn sm icon-btn" onclick="zoom100()" title="100% actual pixels (1)">
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="8" cy="8" r="6"/>
+      <circle cx="8" cy="8" r="1.5" fill="currentColor"/>
+    </svg>
+  </button>
   <div style="position:relative;display:inline-flex;">
-    <span id="zoom-display" style="font-family:var(--font-mono);font-size:10px;color:var(--t2);background:var(--bg3);border:1px solid var(--ln2);border-radius:var(--r);padding:0 8px;height:22px;display:flex;align-items:center;min-width:46px;justify-content:center;cursor:pointer;" onclick="toggleZoomPop(event)" title="Zoom presets & custom %">100%</span>
-    <div id="zoom-popover" style="display:none;position:absolute;top:28px;left:0;background:var(--bg2);border:1px solid var(--ln2);border-radius:var(--r);padding:6px;box-shadow:0 8px 24px rgba(0,0,0,.6);z-index:200;flex-direction:column;gap:5px;width:130px;">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:3px;">
-        <button class="btn sm ghost" onclick="setZoom(0.25);closeZoomPop();">25%</button>
-        <button class="btn sm ghost" onclick="setZoom(0.5);closeZoomPop();">50%</button>
-        <button class="btn sm ghost" onclick="setZoom(1);closeZoomPop();">100%</button>
-        <button class="btn sm ghost" onclick="setZoom(2);closeZoomPop();">200%</button>
-        <button class="btn sm ghost" onclick="setZoom(4);closeZoomPop();">400%</button>
-        <button class="btn sm ghost" onclick="zoomFit();closeZoomPop();">fit</button>
+    <span id="zoom-display" style="font-family:var(--font-mono);font-size:10px;color:var(--t1);background:var(--bg3);border:1px solid var(--ln2);border-radius:var(--r);padding:0 8px;height:24px;display:flex;align-items:center;min-width:48px;justify-content:center;cursor:pointer;user-select:none;transition:all var(--ease);" onclick="toggleZoomPop(event)" onauxclick="if(event.button===1){event.preventDefault();zoom100();}" onmousedown="if(event.button===1)event.preventDefault();" title="Left-click: zoom slider (25%–500%) | Middle-click: reset 100%">100%</span>
+    <div id="zoom-popover" style="display:none;position:absolute;top:28px;left:0;background:var(--bg2);border:1px solid var(--ln2);border-radius:var(--r);padding:8px 10px;box-shadow:0 8px 24px rgba(0,0,0,.6);z-index:200;flex-direction:column;gap:7px;width:180px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <span style="font-family:var(--font-mono);font-size:9px;color:var(--t3);letter-spacing:.1em;text-transform:uppercase;">Zoom</span>
+        <span id="zoom-pop-val" style="font-family:var(--font-mono);font-size:11px;font-weight:600;color:var(--acc2);">100%</span>
       </div>
-      <div style="display:flex;align-items:center;gap:3px;border-top:1px solid var(--ln2);padding-top:5px;">
-        <input type="number" id="zoom-custom-inp" min="5" max="4000" placeholder="%" style="width:100%;height:22px;background:var(--bg1);border:1px solid var(--ln2);border-radius:3px;color:var(--t0);font-family:var(--font-mono);font-size:10px;padding:0 4px;outline:none;" onkeydown="if(event.key==='Enter'){setCustomZoom(this.value);closeZoomPop();}">
-        <button class="btn sm acc" style="padding:0 6px;" onclick="setCustomZoom(document.getElementById('zoom-custom-inp').value);closeZoomPop();">✓</button>
+      <div class="slider-wrap" style="height:18px;">
+        <div class="slider-track-bg">
+          <div id="zoom-slider-fill" class="slider-fill-bar" style="left:0;width:15.8%;background:var(--acc);"></div>
+        </div>
+        <input type="range" id="zoom-slider" min="25" max="500" step="1" value="100"
+          class="slider-overlay"
+          oninput="onZoomSliderInput(this.value,event)"
+          onclick="event.stopPropagation()">
+        <div id="zoom-slider-thumb" class="slider-thumb-disc" style="left:15.8%;"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:3px;" onclick="event.stopPropagation()">
+        <button class="eff-pchip" onclick="applyZoomSnap(25)" id="zsnap-25" style="padding:0;height:20px;font-size:9px;">25%</button>
+        <button class="eff-pchip" onclick="applyZoomSnap(50)" id="zsnap-50" style="padding:0;height:20px;font-size:9px;">50%</button>
+        <button class="eff-pchip" onclick="applyZoomSnap(75)" id="zsnap-75" style="padding:0;height:20px;font-size:9px;">75%</button>
+        <button class="eff-pchip on" onclick="applyZoomSnap(100)" id="zsnap-100" style="padding:0;height:20px;font-size:9px;">100%</button>
+        <button class="eff-pchip" onclick="applyZoomSnap(150)" id="zsnap-150" style="padding:0;height:20px;font-size:9px;">150%</button>
+        <button class="eff-pchip" onclick="applyZoomSnap(200)" id="zsnap-200" style="padding:0;height:20px;font-size:9px;">200%</button>
+        <button class="eff-pchip" onclick="applyZoomSnap(300)" id="zsnap-300" style="padding:0;height:20px;font-size:9px;">300%</button>
+        <button class="eff-pchip" onclick="applyZoomSnap(500)" id="zsnap-500" style="padding:0;height:20px;font-size:9px;">500%</button>
       </div>
     </div>
   </div>
@@ -370,7 +391,7 @@ body.drag-over #cvs-area{outline:2px dashed var(--acc);outline-offset:-6px;}
     <!-- Split comparison draggable divider -->
     <div id="split-bar" onmousedown="startSplitDrag(event)" style="display:none;position:absolute;top:0;width:24px;margin-left:-12px;cursor:ew-resize;z-index:20;user-select:none;">
       <div style="position:absolute;top:0;bottom:0;left:11px;width:2px;background:var(--acc2);box-shadow:0 0 6px rgba(108,92,231,.7);pointer-events:none;"></div>
-      <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:22px;height:32px;border-radius:5px;background:var(--bg2);border:1.5px solid var(--acc2);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--acc2);box-shadow:0 2px 8px rgba(0,0,0,.6);pointer-events:none;">↔</div>
+      <div id="split-handle" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:22px;height:32px;border-radius:5px;background:var(--bg2);border:1.5px solid var(--acc2);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--acc2);box-shadow:0 2px 8px rgba(0,0,0,.6);pointer-events:none;">↔</div>
     </div>
     <div id="drop-hint">
       <div class="dh-hex">⬡</div>
@@ -1912,9 +1933,6 @@ function renderCurrentView(){
     const ctx=c.getContext('2d');
     ctx.putImageData(ST.img,0,0);
     ctx.putImageData(res,0,0,splitX,0,w-splitX,h);
-    // Visual split separator line
-    ctx.fillStyle='rgba(162,155,254,0.9)';
-    ctx.fillRect(splitX-1,0,2,h);
     loadId(ctx.getImageData(0,0,w,h),w,h);
     updateSplitBarPos();
   }
@@ -1926,6 +1944,7 @@ function updateSplitBarPos(){
   if(ST.view!=='split'||!ST.img){bar.style.display='none';return;}
   const area=document.getElementById('cvs-area');
   const cvs=document.getElementById('main-cvs');
+  if(!area||!cvs||!cvs.width){bar.style.display='none';return;}
   const aw=area.clientWidth,ah=area.clientHeight;
   const baseX=(aw-cvs.width*VP.zoom)/2+VP.panX;
   const baseY=(ah-cvs.height*VP.zoom)/2+VP.panY;
@@ -1934,6 +1953,18 @@ function updateSplitBarPos(){
   bar.style.left=sx+'px';
   bar.style.top=baseY+'px';
   bar.style.height=(ST.imgH*VP.zoom)+'px';
+  const handle=document.getElementById('split-handle');
+  if(handle){
+    const visibleTop=Math.max(0,baseY);
+    const visibleBottom=Math.min(ah,baseY+ST.imgH*VP.zoom);
+    if(visibleBottom>visibleTop){
+      const mid=(visibleTop+visibleBottom)/2;
+      const relY=Math.max(16,Math.min(ST.imgH*VP.zoom-16,mid-baseY));
+      handle.style.top=relY+'px';
+    }else{
+      handle.style.top='50%';
+    }
+  }
 }
 
 // ═══════════════════════ PREVIEW / APPLY ═════════════════════
@@ -2587,8 +2618,14 @@ function posCanvas(){
   const baseX=(aw-cvs.width*VP.zoom)/2+VP.panX;
   const baseY=(ah-cvs.height*VP.zoom)/2+VP.panY;
   cvs.style.transform=`translate(${baseX}px,${baseY}px) scale(${VP.zoom})`;
-  document.getElementById('zoom-lbl').textContent=Math.round(VP.zoom*100)+'%';
-  const zd=document.getElementById('zoom-display');if(zd)zd.textContent=Math.round(VP.zoom*100)+'%';
+  const pct=Math.round(VP.zoom*100);
+  document.getElementById('zoom-lbl').textContent=pct+'%';
+  const zd=document.getElementById('zoom-display');if(zd)zd.textContent=pct+'%';
+  if(ST.view==='split')updateSplitBarPos();
+  const p=document.getElementById('zoom-popover');
+  if(p&&p.style.display==='flex'){
+    syncZoomPopUI(pct);
+  }
 }
 function cvWheel(e){
   e.preventDefault();
@@ -2614,6 +2651,9 @@ function zoomFit(){
   VP.zoom=Math.max(0.05,scale);posCanvas();
 }
 function zoom100(){VP.zoom=1;VP.panX=0;VP.panY=0;posCanvas();}
+
+const ZOOM_SNAPS=[25,50,75,100,150,200,300,500];
+
 function toggleZoomPop(e){
   if(e)e.stopPropagation();
   const p=document.getElementById('zoom-popover');
@@ -2621,23 +2661,77 @@ function toggleZoomPop(e){
   const isVis=p.style.display==='flex';
   p.style.display=isVis?'none':'flex';
   if(!isVis){
-    const inp=document.getElementById('zoom-custom-inp');
-    if(inp){inp.value=Math.round(VP.zoom*100);setTimeout(()=>inp.focus(),50);}
+    syncZoomPopUI(Math.round(VP.zoom*100));
   }
 }
+
 function closeZoomPop(){
   const p=document.getElementById('zoom-popover');
   if(p)p.style.display='none';
 }
-function setZoom(z){
-  VP.zoom=Math.max(0.05,Math.min(40,z));
-  VP.panX=0;VP.panY=0;
+
+function syncZoomPopUI(pct){
+  const pVal=document.getElementById('zoom-pop-val');
+  if(pVal)pVal.textContent=pct+'%';
+  const sl=document.getElementById('zoom-slider');
+  if(sl)sl.value=Math.max(25,Math.min(500,pct));
+  const fill=document.getElementById('zoom-slider-fill');
+  const thumb=document.getElementById('zoom-slider-thumb');
+  const clamped=Math.max(25,Math.min(500,pct));
+  const fillPct=((clamped-25)/(500-25)*100).toFixed(1)+'%';
+  if(fill)fill.style.width=fillPct;
+  if(thumb)thumb.style.left=fillPct;
+  ZOOM_SNAPS.forEach(s=>{
+    const b=document.getElementById('zsnap-'+s);
+    if(b)b.classList.toggle('on',s===pct);
+  });
+}
+
+function onZoomSliderInput(rawVal,e){
+  if(e)e.stopPropagation();
+  let val=parseFloat(rawVal);
+  for(const snap of ZOOM_SNAPS){
+    const threshold=snap>=200?8:4;
+    if(Math.abs(val-snap)<=threshold){
+      val=snap;
+      const sl=document.getElementById('zoom-slider');
+      if(sl)sl.value=snap;
+      break;
+    }
+  }
+  setZoomPct(val);
+}
+
+function applyZoomSnap(val){
+  setZoomPct(val);
+}
+
+function setZoomPct(pct){
+  const newZ=Math.max(0.05,Math.min(40,pct/100));
+  const cvs=document.getElementById('main-cvs');
+  const area=document.getElementById('cvs-area');
+  if(cvs&&cvs.width&&area){
+    const aw=area.clientWidth,ah=area.clientHeight;
+    const cx=aw/2,cy=ah/2;
+    const imgX=(cx-(aw-cvs.width*VP.zoom)/2-VP.panX)/VP.zoom;
+    const imgY=(cy-(ah-cvs.height*VP.zoom)/2-VP.panY)/VP.zoom;
+    VP.zoom=newZ;
+    VP.panX=cx-(aw-cvs.width*VP.zoom)/2-imgX*VP.zoom;
+    VP.panY=cy-(ah-cvs.height*VP.zoom)/2-imgY*VP.zoom;
+  }else{
+    VP.zoom=newZ;
+  }
   posCanvas();
 }
+
+function setZoom(z){
+  setZoomPct(Math.round(z*100));
+}
+
 function setCustomZoom(val){
   const n=parseFloat(val);
   if(!isNaN(n)&&n>0){
-    setZoom(n/100);
+    setZoomPct(n);
   }
 }
 
