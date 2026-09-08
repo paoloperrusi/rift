@@ -245,6 +245,10 @@ input[type=range]::-moz-range-thumb:hover{background:var(--acc3);}
 
 /* ADJUST PANE */
 #pane-adjust{flex:1;overflow-y:auto;padding:0;display:flex;flex-direction:column;}
+.adj-subtabs{display:flex;border-bottom:1px solid var(--ln);background:var(--bg1);flex-shrink:0;height:30px;}
+.adj-subtab{flex:1;display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:9.5px;color:var(--t2);cursor:pointer;border-bottom:2px solid transparent;transition:all var(--ease);letter-spacing:.04em;user-select:none;gap:3px;}
+.adj-subtab:hover{color:var(--t0);background:var(--bg2);}
+.adj-subtab.on{color:var(--acc2);border-bottom-color:var(--acc);background:var(--dim);font-weight:600;}
 .adj-sec{padding:8px 12px;}
 .adj-sec-title{font-family:var(--font-mono);font-size:8px;letter-spacing:.13em;text-transform:uppercase;color:var(--t3);padding:2px 0 5px;}
 .adj-grid2{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:5px;}
@@ -291,9 +295,28 @@ body.drag-over #cvs-area{outline:2px dashed var(--acc);outline-offset:-6px;}
   <span class="logo">RIFT</span>
   <span class="logo-ver">v0.3</span>
   <div class="tb-sep"></div>
-  <button class="btn ghost sm" onclick="openImage()">⌘ open</button>
-  <button class="btn ghost sm" onclick="loadDemoImage(event)" title="Load sample test pattern">✦ demo</button>
-  <button class="btn ghost sm" onclick="exportImg()">↓ export</button>
+  <button class="btn sm icon-btn" onclick="openImage()" title="Open image (O)">
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M2 3.5A1.5 1.5 0 0 1 3.5 2h2.8a1.5 1.5 0 0 1 1.06.44L8.5 3.5H12.5A1.5 1.5 0 0 1 14 5v7.5a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 12.5v-9z"/>
+    </svg>
+  </button>
+  <button class="btn sm icon-btn" onclick="loadDemoImage(event)" title="Load sample test card">
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M8 1.5l1.5 4.5L14 7.5l-4.5 1.5L8 13.5l-1.5-4.5L2 7.5l4.5-1.5L8 1.5z"/>
+    </svg>
+  </button>
+  <div style="display:flex;align-items:center;gap:2px;">
+    <button class="btn sm icon-btn" onclick="exportImg()" title="Export image (Ctrl+S)">
+      <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M8 2v8M4.5 6.5L8 10l3.5-3.5M2.5 12.5h11"/>
+      </svg>
+    </button>
+    <select class="res-sel" id="render-res" title="Export resolution scale" style="height:24px;padding:0 3px;min-width:38px;text-align:center;">
+      <option value="1">1×</option>
+      <option value="2">2×</option>
+      <option value="4">4×</option>
+    </select>
+  </div>
   <div class="tb-sep"></div>
   <button class="btn sm icon-btn" onclick="zoomFit()" title="Fit image to window (Z)">
     <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
@@ -336,18 +359,12 @@ body.drag-over #cvs-area{outline:2px dashed var(--acc);outline-offset:-6px;}
     </div>
   </div>
   <div class="tb-sep"></div>
-  <select class="res-sel" id="render-res" title="Export render resolution">
-    <option value="1">1× export</option>
-    <option value="2">2× export</option>
-    <option value="4">4× export</option>
-  </select>
-  <div class="tb-sep"></div>
   <button class="btn sm icon-btn" id="btn-undo" onclick="undo()" title="Undo (Ctrl+Z)" disabled>↶</button>
   <button class="btn sm icon-btn" id="btn-redo" onclick="redo()" title="Redo (Ctrl+Y)" disabled>↷</button>
+  <button class="btn sm icon-btn" onclick="resetToOrig()" title="Reset uncommitted preview to current source (↺)">↺</button>
+  <button class="btn sm icon-btn" onclick="revertToInitial()" title="Revert all changes back to original image (⎌)">⎌</button>
   <div class="tbr">
-    <button class="btn sm" onclick="resetToOrig()" title="Reset uncommitted preview to current source">↺ reset</button>
-    <button class="btn sm" onclick="revertToInitial()" title="Revert all changes back to pristine original image">⎌ revert original</button>
-    <button class="btn acc sm" onclick="applyEffect()" title="Bake effect into working image (Ctrl+Enter)">✓ apply</button>
+    <button class="btn acc sm" onclick="applyEffect()" style="padding:0 12px;font-weight:600;gap:4px;" title="Bake effect into working image (Ctrl+Enter)">✓ apply</button>
   </div>
 </div>
 
@@ -384,12 +401,20 @@ body.drag-over #cvs-area{outline:2px dashed var(--acc);outline-offset:-6px;}
       <div class="xy-lbl" id="xy-lbl-y" style="display:none"></div>
     </div>
     <!-- Crop selection rect -->
-    <div id="crop-rect" style="display:none;position:absolute;border:1.5px solid var(--acc2);box-shadow:0 0 0 9999px rgba(0,0,0,.4);pointer-events:none;z-index:5;"></div>
+    <div id="crop-rect" style="display:none;position:absolute;border:1.5px solid var(--acc2);box-shadow:0 0 0 9999px rgba(0,0,0,.45);pointer-events:none;z-index:5;">
+      <div id="crop-actions" style="position:absolute;bottom:-28px;right:0;display:flex;gap:3px;background:var(--bg2);border:1px solid var(--ln2);border-radius:var(--r);padding:2px;box-shadow:0 4px 12px rgba(0,0,0,0.6);pointer-events:auto;">
+        <button class="btn sm acc icon-btn" onclick="adjCommitCrop()" title="Commit crop (Enter)" style="width:24px;height:20px;font-size:11px;">✓</button>
+        <button class="btn sm ghost icon-btn" onclick="adjCancelCrop()" title="Cancel crop (Esc)" style="width:24px;height:20px;font-size:11px;">✕</button>
+      </div>
+    </div>
     <!-- Floating toolbar -->
     <div id="float-tb" style="position:absolute;top:8px;left:8px;z-index:10;display:flex;flex-direction:column;gap:3px;">
-      <div id="ftool-sel" class="ftool on" onclick="setFTool('select',this)" title="Select / XY map — drag in canvas to control effect parameters">↖</div>
-      <div id="ftool-pan" class="ftool" onclick="setFTool('pan',this)" title="Pan — drag to move canvas">✥</div>
-      <div id="ftool-crop" class="ftool" onclick="setFTool('crop',this)" title="Crop — drag to define crop region, then commit in Adjust tab">⬚</div>
+      <div id="ftool-sel" class="ftool on" onclick="setFTool('select',this)" title="Select / XY map (V)">↖</div>
+      <div id="ftool-pan" class="ftool" onclick="setFTool('pan',this)" title="Pan canvas (H / Space)">✥</div>
+      <div id="ftool-crop" class="ftool" onclick="setFTool('crop',this)" title="Crop tool (C)">⬚</div>
+      <div id="ftool-transform" class="ftool" onclick="setFTool('transform',this)" title="Transform — rotate, flip & resize (Adjust tab)">↻</div>
+      <div id="ftool-tone" class="ftool" onclick="setFTool('tone',this)" title="Tone — colour & exposure (Adjust tab)">◐</div>
+      <div id="ftool-detail" class="ftool" onclick="setFTool('detail',this)" title="Detail — sharpen, blur & lens (Adjust tab)">✦</div>
     </div>
 
     <!-- Split comparison draggable divider -->
@@ -405,9 +430,9 @@ body.drag-over #cvs-area{outline:2px dashed var(--acc);outline-offset:-6px;}
     </div>
     <canvas id="main-cvs" draggable="false" ondragstart="return false;"></canvas>
     <div id="vc">
-      <button class="vcb on" onclick="setView('orig',this)">original</button>
-      <button class="vcb" onclick="setView('result',this)">result</button>
-      <button class="vcb" onclick="setView('split',this)">split</button>
+      <button class="vcb on" onclick="setView('orig',this)" title="Original source image (1)">○ orig</button>
+      <button class="vcb" onclick="setView('result',this)" title="Processed result preview (2)">● result</button>
+      <button class="vcb" onclick="setView('split',this)" title="Split comparison mode (3)">◐ split</button>
     </div>
     <div id="zoom-lbl">100%</div>
   </div>
@@ -416,9 +441,9 @@ body.drag-over #cvs-area{outline:2px dashed var(--acc);outline-offset:-6px;}
     <div id="seq-pills"></div>
     <div id="seq-add" onclick="seqAdd()" title="Add current effect to sequence">+</div>
     <div style="width:1px;height:18px;background:var(--ln);flex-shrink:0"></div>
-    <button class="btn sm ghost" onclick="seqRun()">▶ run</button>
-    <button class="btn sm ghost" id="btn-cyc" onclick="seqCycleToggle()">↻ cycle</button>
-    <button class="btn sm ghost" onclick="seqClear()">✕ clear</button>
+    <button class="btn sm icon-btn ghost" onclick="seqRun()" title="Run sequence (▶)">▶</button>
+    <button class="btn sm icon-btn ghost" id="btn-cyc" onclick="seqCycleToggle()" title="Toggle auto-cycle (↻)">↻</button>
+    <button class="btn sm icon-btn ghost" onclick="seqClear()" title="Clear sequence (✕)">✕</button>
   </div>
 </div>
 
@@ -438,54 +463,19 @@ body.drag-over #cvs-area{outline:2px dashed var(--acc);outline-offset:-6px;}
 
   <!-- ADJUST PANE -->
   <div id="pane-adjust" style="display:none">
-    <div class="adj-sec">
-      <div class="adj-sec-title">geometry</div>
-      <div class="adj-grid2">
-        <div class="adj-btn" onclick="adjRotate(-90)" title="Rotate 90° counter-clockwise">↺ 90° CCW</div>
-        <div class="adj-btn" onclick="adjRotate(90)" title="Rotate 90° clockwise">↻ 90° CW</div>
-        <div class="adj-btn" onclick="adjFlip('h')" title="Flip horizontally">↔ flip H</div>
-        <div class="adj-btn" onclick="adjFlip('v')" title="Flip vertically">↕ flip V</div>
-      </div>
-      <div class="adj-row">
-        <span class="adj-lbl" title="Custom rotation angle">angle °</span>
-        <input class="adj-inp" id="adj-angle" type="number" value="15" min="-360" max="360" title="Rotation angle in degrees">
-        <button class="btn sm" onclick="adjRotateCustom()" title="Apply custom rotation">go</button>
-      </div>
-      <div class="adj-row">
-        <span class="adj-lbl" title="Background fill when rotating">fill</span>
-        <select class="adj-inp" id="adj-fill" title="Fill colour for empty areas after rotation">
-          <option value="black">black</option>
-          <option value="white">white</option>
-          <option value="wrap">wrap</option>
-        </select>
-      </div>
+    <div class="adj-subtabs">
+      <div class="adj-subtab on" id="astab-crop" onclick="setAdjSubtab('crop')">⬚ crop</div>
+      <div class="adj-subtab" id="astab-transform" onclick="setAdjSubtab('transform')">↻ geom</div>
+      <div class="adj-subtab" id="astab-tone" onclick="setAdjSubtab('tone')">◐ tone</div>
+      <div class="adj-subtab" id="astab-detail" onclick="setAdjSubtab('detail')">✦ detail</div>
     </div>
-    <div class="adj-sep"></div>
 
-    <div class="adj-sec">
-      <div class="adj-sec-title">resize</div>
-      <div class="adj-row">
-        <span class="adj-lbl" title="Target width">W px</span>
-        <input class="adj-inp" id="adj-rw" type="number" value="800" min="1" max="8192" title="New width in pixels">
-      </div>
-      <div class="adj-row">
-        <span class="adj-lbl" title="Target height">H px</span>
-        <input class="adj-inp" id="adj-rh" type="number" value="600" min="1" max="8192" title="New height in pixels">
-        <button class="btn sm" onclick="adjResize()" title="Apply resize">go</button>
-      </div>
-      <div class="adj-row">
-        <label style="font-family:var(--font-mono);font-size:9px;color:var(--t2);display:flex;align-items:center;gap:4px;cursor:pointer;user-select:none" title="Lock aspect ratio when resizing">
-          <input type="checkbox" id="adj-lock" checked> lock ratio
-        </label>
-      </div>
-    </div>
-    <div class="adj-sep"></div>
-
-    <div class="adj-sec">
-      <div class="adj-sec-title">crop</div>
+    <!-- SUBTAB: CROP -->
+    <div id="asec-crop" class="adj-sec" style="display:flex;flex-direction:column;gap:8px;">
+      <div class="adj-sec-title">crop area</div>
       <canvas class="adj-crop-prev" id="adj-crop-prev" title="Drag on canvas with crop tool active to define crop region"></canvas>
-      <div class="adj-crop-info" id="adj-crop-info">activate ⬚ in toolbar, drag to crop</div>
-      <div class="adj-row" style="margin-top:4px">
+      <div class="adj-crop-info" id="adj-crop-info">drag on canvas to define crop box</div>
+      <div class="adj-row">
         <span class="adj-lbl" title="Aspect ratio constraint">ratio</span>
         <select class="adj-inp" id="adj-ratio" onchange="adjSetRatio()" title="Constrain crop to this aspect ratio">
           <option value="free">free</option>
@@ -496,31 +486,79 @@ body.drag-over #cvs-area{outline:2px dashed var(--acc);outline-offset:-6px;}
           <option value="0.707">A4</option>
         </select>
       </div>
-      <div style="display:flex;gap:4px;margin-top:4px">
-        <button class="btn sm acc" id="btn-do-crop" style="flex:1" onclick="adjCommitCrop()" disabled title="Apply crop">commit crop</button>
-        <button class="btn sm ghost" onclick="adjCancelCrop()" title="Cancel crop">cancel</button>
+      <div style="display:flex;gap:4px;margin-top:2px;">
+        <button class="btn sm acc" id="btn-do-crop" style="flex:1" onclick="adjCommitCrop()" disabled title="Apply crop (Enter)">✓ commit crop</button>
+        <button class="btn sm ghost" onclick="adjCancelCrop()" title="Cancel crop (Esc)">✕ cancel</button>
       </div>
     </div>
-    <div class="adj-sep"></div>
 
-    <div class="adj-sec">
-      <div class="adj-sec-title">colour &amp; tone</div>
+    <!-- SUBTAB: TRANSFORM -->
+    <div id="asec-transform" style="display:none;flex-direction:column;">
+      <div class="adj-sec">
+        <div class="adj-sec-title">rotation &amp; flip</div>
+        <div class="adj-grid2">
+          <div class="adj-btn" onclick="adjRotate(-90)" title="Rotate 90° CCW">↺ 90° CCW</div>
+          <div class="adj-btn" onclick="adjRotate(90)" title="Rotate 90° CW">↻ 90° CW</div>
+          <div class="adj-btn" onclick="adjFlip('h')" title="Flip horizontally">↔ flip H</div>
+          <div class="adj-btn" onclick="adjFlip('v')" title="Flip vertically">↕ flip V</div>
+        </div>
+        <div class="adj-row">
+          <span class="adj-lbl" title="Custom rotation angle">angle °</span>
+          <input class="adj-inp" id="adj-angle" type="number" value="15" min="-360" max="360" title="Rotation angle in degrees">
+          <button class="btn sm icon-btn" onclick="adjRotateCustom()" title="Apply custom rotation (Enter)" style="min-width:24px;">↵</button>
+        </div>
+        <div class="adj-row">
+          <span class="adj-lbl" title="Background fill when rotating">fill</span>
+          <select class="adj-inp" id="adj-fill" title="Fill colour for empty areas after rotation">
+            <option value="black">black</option>
+            <option value="white">white</option>
+            <option value="wrap">wrap</option>
+          </select>
+        </div>
+      </div>
+      <div class="adj-sep"></div>
+      <div class="adj-sec">
+        <div class="adj-sec-title">resize canvas</div>
+        <div class="adj-row">
+          <span class="adj-lbl" title="Target width">W px</span>
+          <input class="adj-inp" id="adj-rw" type="number" value="800" min="1" max="8192" title="New width in pixels">
+        </div>
+        <div class="adj-row">
+          <span class="adj-lbl" title="Target height">H px</span>
+          <input class="adj-inp" id="adj-rh" type="number" value="600" min="1" max="8192" title="New height in pixels">
+          <button class="btn sm icon-btn" onclick="adjResize()" title="Apply resize (Enter)" style="min-width:24px;">↵</button>
+        </div>
+        <div class="adj-row">
+          <label style="font-family:var(--font-mono);font-size:9px;color:var(--t2);display:flex;align-items:center;gap:4px;cursor:pointer;user-select:none" title="Lock aspect ratio when resizing">
+            <input type="checkbox" id="adj-lock" checked> lock ratio
+          </label>
+        </div>
+      </div>
     </div>
-    <div style="padding:0 12px" id="adj-sliders-col"></div>
-    <div class="adj-sep"></div>
-    <div class="adj-sec">
-      <div class="adj-sec-title">lens &amp; detail</div>
+
+    <!-- SUBTAB: TONE -->
+    <div id="asec-tone" style="display:none;flex-direction:column;">
+      <div class="adj-sec"><div class="adj-sec-title">colour &amp; tonal adjustments</div></div>
+      <div style="padding:0 12px" id="adj-sliders-col"></div>
+      <div class="adj-sep"></div>
+      <div class="adj-sec" style="padding-bottom:10px;display:flex;flex-direction:column;gap:6px">
+        <button class="btn sm acc" style="width:100%" onclick="adjCommit()" title="Bake current adjustments into source">✓ commit adjustments</button>
+        <button class="btn sm ghost" style="width:100%" onclick="adjReset()" title="Reset all adjustments to zero">↺ reset adjustments</button>
+      </div>
     </div>
-    <div style="padding:0 12px" id="adj-sliders-lens"></div>
-    <div class="adj-sep"></div>
-    <div class="adj-sec">
-      <div class="adj-sec-title">sharpen / blur</div>
-    </div>
-    <div style="padding:0 12px" id="adj-sliders-sharpen"></div>
-    <div class="adj-sep"></div>
-    <div class="adj-sec" style="padding-bottom:10px;display:flex;flex-direction:column;gap:6px">
-      <button class="btn sm acc" style="width:100%" onclick="adjCommit()" title="Bake current adjustments into source">✓ commit adjustments to source</button>
-      <button class="btn sm ghost" style="width:100%" onclick="adjReset()" title="Reset all colour adjustments">↺ reset all adjustments</button>
+
+    <!-- SUBTAB: DETAIL -->
+    <div id="asec-detail" style="display:none;flex-direction:column;">
+      <div class="adj-sec"><div class="adj-sec-title">sharpness &amp; blur</div></div>
+      <div style="padding:0 12px" id="adj-sliders-sharpen"></div>
+      <div class="adj-sep"></div>
+      <div class="adj-sec"><div class="adj-sec-title">lens &amp; texture</div></div>
+      <div style="padding:0 12px" id="adj-sliders-lens"></div>
+      <div class="adj-sep"></div>
+      <div class="adj-sec" style="padding-bottom:10px;display:flex;flex-direction:column;gap:6px">
+        <button class="btn sm acc" style="width:100%" onclick="adjCommit()" title="Bake current adjustments into source">✓ commit adjustments</button>
+        <button class="btn sm ghost" style="width:100%" onclick="adjReset()" title="Reset all adjustments to zero">↺ reset adjustments</button>
+      </div>
     </div>
   </div>
 
@@ -706,10 +744,18 @@ function undo(){
   clone.data.set(state.img.data);
   ST.img=clone;ST.imgW=state.w;ST.imgH=state.h;
   ST.result=clone;ST.mask=null;
+  if(typeof adjCancelCrop==='function')adjCancelCrop();
+  if(typeof ADJ!=='undefined'&&typeof ADJ_DEFS!=='undefined'){
+    ADJ_DEFS.forEach(d=>{ADJ[d.id]=d.def;});
+    if(typeof buildAdjSliders==='function')buildAdjSliders();
+  }
   loadId(ST.img,ST.imgW,ST.imgH);
+  if(document.getElementById('adj-rw'))document.getElementById('adj-rw').value=ST.imgW;
+  if(document.getElementById('adj-rh'))document.getElementById('adj-rh').value=ST.imgH;
   updateHistoryUI();
   toast('undo: '+state.desc,'info');
   renderMaskCanvas();
+  renderCurrentView();
 }
 
 function redo(){
@@ -720,10 +766,18 @@ function redo(){
   clone.data.set(state.img.data);
   ST.img=clone;ST.imgW=state.w;ST.imgH=state.h;
   ST.result=clone;ST.mask=null;
+  if(typeof adjCancelCrop==='function')adjCancelCrop();
+  if(typeof ADJ!=='undefined'&&typeof ADJ_DEFS!=='undefined'){
+    ADJ_DEFS.forEach(d=>{ADJ[d.id]=d.def;});
+    if(typeof buildAdjSliders==='function')buildAdjSliders();
+  }
   loadId(ST.img,ST.imgW,ST.imgH);
+  if(document.getElementById('adj-rw'))document.getElementById('adj-rw').value=ST.imgW;
+  if(document.getElementById('adj-rh'))document.getElementById('adj-rh').value=ST.imgH;
   updateHistoryUI();
   toast('redo: '+state.desc,'info');
   renderMaskCanvas();
+  renderCurrentView();
 }
 
 function updateHistoryUI(){
@@ -2052,9 +2106,23 @@ function revertToInitial(){
   pushHistory('revert to original');
   const clone=mkId(base.width,base.height);
   clone.data.set(base.data);
-  ST.img=clone;ST.imgW=base.width;ST.imgH=base.height;ST.result=clone;
+  ST.img=clone;ST.imgW=base.width;ST.imgH=base.height;ST.mask=null;
+  if(typeof adjCancelCrop==='function')adjCancelCrop();
+  if(typeof ADJ!=='undefined'&&typeof ADJ_DEFS!=='undefined'){
+    ADJ_DEFS.forEach(d=>{ADJ[d.id]=d.def;});
+    if(typeof buildAdjSliders==='function')buildAdjSliders();
+  }
+  const ef=EFX[ST.activeKey]||GEN[ST.activeKey];
+  if(ef&&ef.params){
+    ef.params.forEach(p=>{ST.activeParams[p.id]=p.def;});
+    renderParams(ef,ST.activeKey);
+  }
+  ST.result=clone;
   loadId(ST.img,ST.imgW,ST.imgH);
+  if(document.getElementById('adj-rw'))document.getElementById('adj-rw').value=ST.imgW;
+  if(document.getElementById('adj-rh'))document.getElementById('adj-rh').value=ST.imgH;
   renderCurrentView();
+  renderMaskCanvas();
   toast('reverted to original image','info');
 }
 
@@ -2071,9 +2139,19 @@ function loadId(id,w,h){
 
 function resetToOrig(){
   if(!ST.img)return;
+  if(typeof adjCancelCrop==='function')adjCancelCrop();
+  if(typeof ADJ!=='undefined'&&typeof ADJ_DEFS!=='undefined'){
+    ADJ_DEFS.forEach(d=>{ADJ[d.id]=d.def;});
+    if(typeof buildAdjSliders==='function')buildAdjSliders();
+  }
+  const ef=EFX[ST.activeKey]||GEN[ST.activeKey];
+  if(ef&&ef.params){
+    ef.params.forEach(p=>{ST.activeParams[p.id]=p.def;});
+    renderParams(ef,ST.activeKey);
+  }
   ST.result=ST.img;
   renderCurrentView();
-  toast('preview reset to current source','info');
+  toast('preview & adjustments reset to current source','info');
 }
 
 function loadDemoImage(e){
@@ -2623,7 +2701,12 @@ function setRpTab(tab,el){
       el.style.setProperty('--v',((v-min)/(max-min)*100).toFixed(1)+'%');
     });
   }
-  if(tab==='adjust'){buildAdjSliders();}
+  if(tab==='adjust'){
+    buildAdjSliders();
+    if(typeof setAdjSubtab==='function'){setAdjSubtab(_adjSubtab||'crop');}
+  } else {
+    if(typeof _activeTool!=='undefined'&&_activeTool==='crop'&&typeof adjCancelCrop==='function'){adjCancelCrop();}
+  }
 }
 function unlockScr(){openModal('modal-warn');}
 function confirmUnlock(){
@@ -2834,6 +2917,7 @@ function posCanvas(){
   document.getElementById('zoom-lbl').textContent=pct+'%';
   const zd=document.getElementById('zoom-display');if(zd)zd.textContent=pct+'%';
   if(ST.view==='split')updateSplitBarPos();
+  if(ST._cropRect)updateCropRect();
   const p=document.getElementById('zoom-popover');
   if(p&&p.style.display==='flex'){
     syncZoomPopUI(pct);
@@ -2949,22 +3033,54 @@ function setCustomZoom(val){
 
 // ─── CANVAS MOUSE ────────────────────────────────────────────
 let _activeTool='select';
+let _adjSubtab='crop';
+
+function setAdjSubtab(sub){
+  _adjSubtab=sub;
+  document.querySelectorAll('.adj-subtab').forEach(b=>b.classList.remove('on'));
+  document.getElementById('astab-'+sub)?.classList.add('on');
+  
+  ['crop','transform','tone','detail'].forEach(s=>{
+    const pane=document.getElementById('asec-'+s);
+    if(pane)pane.style.display=(s===sub)?'flex':'none';
+  });
+  
+  if(_activeTool!==sub){
+    if(_activeTool==='crop'&&sub!=='crop')adjCancelCrop();
+    _activeTool=sub;
+    document.querySelectorAll('.ftool').forEach(f=>{f.classList.remove('on');f.classList.remove('active-pan');});
+    document.getElementById('ftool-'+sub)?.classList.add('on');
+    const area=document.getElementById('cvs-area');
+    if(area)area.style.cursor=sub==='crop'?'crosshair':'default';
+    if(sub!=='crop'){
+      const cr=document.getElementById('crop-rect');if(cr)cr.style.display='none';
+      ST._cropRect=null;
+    }
+  }
+}
+
 function setFTool(t,el){
   if(_activeTool==='crop'&&t!=='crop'){
     adjCancelCrop();
   }
   _activeTool=t;
   document.querySelectorAll('.ftool').forEach(f=>{f.classList.remove('on');f.classList.remove('active-pan');});
-  if(el){
-    el.classList.add('on');
-  } else {
-    const toolEl=document.getElementById(t==='select'?'ftool-sel':t==='pan'?'ftool-pan':'ftool-crop');
-    if(toolEl)toolEl.classList.add('on');
-  }
+  const toolId=t==='select'?'ftool-sel':('ftool-'+t);
+  const toolEl=el||document.getElementById(toolId);
+  if(toolEl)toolEl.classList.add('on');
+  
   const area=document.getElementById('cvs-area');
-  area.style.cursor=t==='pan'?'grab':t==='crop'?'crosshair':'default';
-  if(t==='crop'){
+  if(area)area.style.cursor=t==='pan'?'grab':t==='crop'?'crosshair':'default';
+  
+  if(['crop','transform','tone','detail'].includes(t)){
     setRpTab('adjust');
+    _adjSubtab=t;
+    document.querySelectorAll('.adj-subtab').forEach(b=>b.classList.remove('on'));
+    document.getElementById('astab-'+t)?.classList.add('on');
+    ['crop','transform','tone','detail'].forEach(s=>{
+      const pane=document.getElementById('asec-'+s);
+      if(pane)pane.style.display=(s===t)?'flex':'none';
+    });
   } else {
     const cr=document.getElementById('crop-rect');if(cr)cr.style.display='none';
     ST._cropRect=null;
@@ -3033,11 +3149,28 @@ function cvMMove(e){
     const pos=canvasToImage(e);
     let x2=Math.max(0,Math.min(ST.imgW,pos.x)), y2=Math.max(0,Math.min(ST.imgH,pos.y));
     const ratio=parseFloat(document.getElementById('adj-ratio')?.value||'free');
-    if(!isNaN(ratio)){const w2=Math.abs(x2-ST._cropStart.x);const h2=w2/ratio;y2=ST._cropStart.y+(y2>ST._cropStart.y?h2:-h2);}
-    ST._cropRect={
-      x:Math.round(Math.min(ST._cropStart.x,x2)),y:Math.round(Math.min(ST._cropStart.y,y2)),
-      w:Math.round(Math.abs(x2-ST._cropStart.x)),h:Math.round(Math.abs(y2-ST._cropStart.y))
-    };
+    if(!isNaN(ratio)&&ratio>0){
+      let w2=Math.abs(x2-ST._cropStart.x);
+      let h2=w2/ratio;
+      let targetY=ST._cropStart.y+(y2>=ST._cropStart.y?h2:-h2);
+      if(targetY<0){
+        h2=ST._cropStart.y;
+        w2=h2*ratio;
+        x2=ST._cropStart.x+(x2>=ST._cropStart.x?w2:-w2);
+        targetY=0;
+      } else if(targetY>ST.imgH){
+        h2=ST.imgH-ST._cropStart.y;
+        w2=h2*ratio;
+        x2=ST._cropStart.x+(x2>=ST._cropStart.x?w2:-w2);
+        targetY=ST.imgH;
+      }
+      y2=targetY;
+    }
+    const rx=Math.max(0,Math.min(ST.imgW,Math.round(Math.min(ST._cropStart.x,x2))));
+    const ry=Math.max(0,Math.min(ST.imgH,Math.round(Math.min(ST._cropStart.y,y2))));
+    const rw=Math.max(0,Math.min(ST.imgW-rx,Math.round(Math.abs(x2-ST._cropStart.x))));
+    const rh=Math.max(0,Math.min(ST.imgH-ry,Math.round(Math.abs(y2-ST._cropStart.y))));
+    ST._cropRect={x:rx,y:ry,w:rw,h:rh};
     updateCropRect();
   }
   if(ST._xyDragging&&ST.xyActive){
@@ -3077,13 +3210,21 @@ function canvasToImage(e){
   return{x:(e.clientX-baseX)/VP.zoom,y:(e.clientY-baseY)/VP.zoom};
 }
 function updateCropRect(){
-  const cr=ST._cropRect;if(!cr)return;
+  const cr=ST._cropRect;
+  const rect=document.getElementById('crop-rect');
+  if(!rect)return;
+  if(!cr||cr.w<2||cr.h<2){
+    rect.style.display='none';
+    const btn=document.getElementById('btn-do-crop');
+    if(btn)btn.disabled=true;
+    return;
+  }
   const area=document.getElementById('cvs-area');
   const cvs=document.getElementById('main-cvs');
+  if(!area||!cvs)return;
   const aw=area.clientWidth,ah=area.clientHeight;
   const baseX=(aw-cvs.width*VP.zoom)/2+VP.panX;
   const baseY=(ah-cvs.height*VP.zoom)/2+VP.panY;
-  const rect=document.getElementById('crop-rect');
   rect.style.display='block';
   rect.style.left=(baseX+cr.x*VP.zoom)+'px';
   rect.style.top=(baseY+cr.y*VP.zoom)+'px';
@@ -3092,16 +3233,19 @@ function updateCropRect(){
   const info=document.getElementById('adj-crop-info');
   if(info)info.textContent=`${cr.w}×${cr.h}px`;
   const btn=document.getElementById('btn-do-crop');
-  if(btn)btn.disabled=cr.w<1||cr.h<1;
+  if(btn)btn.disabled=false;
 }
+
 function updateCropPreview(){
   if(!ST._cropRect||!ST.img)return;
   const cr=ST._cropRect;
+  if(cr.w<2||cr.h<2)return;
   const prev=document.getElementById('adj-crop-prev');if(!prev)return;
   const ctx=prev.getContext('2d');
   const sc=document.createElement('canvas');sc.width=cr.w||1;sc.height=cr.h||1;
   sc.getContext('2d').putImageData(ST.img,-(cr.x||0),-(cr.y||0));
-  ctx.clearRect(0,0,prev.width,prev.height);ctx.drawImage(sc,0,0,prev.width,prev.height);
+  ctx.clearRect(0,0,prev.width,prev.height);
+  ctx.drawImage(sc,0,0,prev.width,prev.height);
 }
 
 // ─── ADJUST TOOLS ───────────────────────────────────────────
@@ -3125,8 +3269,12 @@ function adjRotate(deg){
   ctx.drawImage(tmp2,-ST.imgW/2,-ST.imgH/2);ctx.restore();
   pushHistory('rotate '+deg+'°');
   ST.img=ctx.getImageData(0,0,nw,nh);ST.imgW=nw;ST.imgH=nh;ST.mask=null;
-  loadId(ST.img,nw,nh);posCanvas();toast('rotated '+deg+'°','ok');
+  ST.result=ST.img;
+  if(document.getElementById('adj-rw'))document.getElementById('adj-rw').value=nw;
+  if(document.getElementById('adj-rh'))document.getElementById('adj-rh').value=nh;
+  loadId(ST.img,nw,nh);posCanvas();renderCurrentView();toast('rotated '+deg+'°','ok');
 }
+
 function adjFlip(axis){
   if(!ST.img){toast('load an image first','err');return;}
   const c=document.createElement('canvas');c.width=ST.imgW;c.height=ST.imgH;
@@ -3139,13 +3287,16 @@ function adjFlip(axis){
   ctx.drawImage(tmp,0,0);ctx.restore();
   pushHistory('flip '+axis);
   ST.img=ctx.getImageData(0,0,ST.imgW,ST.imgH);
-  loadId(ST.img,ST.imgW,ST.imgH);toast('flipped '+axis,'ok');
+  ST.result=ST.img;
+  loadId(ST.img,ST.imgW,ST.imgH);renderCurrentView();toast('flipped '+axis,'ok');
 }
+
 function adjRotateCustom(){
   const deg=parseFloat(document.getElementById('adj-angle')?.value||'0');
   if(isNaN(deg))return;
   adjRotate(deg);
 }
+
 function adjResize(){
   if(!ST.img){toast('load an image first','err');return;}
   let tw=parseInt(document.getElementById('adj-rw')?.value||ST.imgW);
@@ -3161,29 +3312,45 @@ function adjResize(){
   ctx.drawImage(tmp,0,0,tw,th);
   pushHistory('resize '+tw+'×'+th);
   ST.img=ctx.getImageData(0,0,tw,th);ST.imgW=tw;ST.imgH=th;ST.mask=null;
-  loadId(ST.img,tw,th);posCanvas();
+  ST.result=ST.img;
+  loadId(ST.img,tw,th);posCanvas();renderCurrentView();
   if(document.getElementById('adj-rw'))document.getElementById('adj-rw').value=tw;
   if(document.getElementById('adj-rh'))document.getElementById('adj-rh').value=th;
   toast('resized to '+tw+'×'+th,'ok');
 }
+
 function adjSetRatio(){/* handled in cvMMove */}
+
 function adjCommitCrop(){
   if(!ST._cropRect||!ST.img){toast('define a crop region first','err');return;}
   const cr=ST._cropRect;
-  if(cr.w<1||cr.h<1){toast('crop region too small','err');return;}
+  if(cr.w<2||cr.h<2){toast('crop region too small','err');return;}
   const c=document.createElement('canvas');c.width=cr.w;c.height=cr.h;
   c.getContext('2d').putImageData(ST.img,-cr.x,-cr.y);
   pushHistory('crop '+cr.w+'×'+cr.h);
   ST.img=c.getContext('2d').getImageData(0,0,cr.w,cr.h);
   ST.imgW=cr.w;ST.imgH=cr.h;ST.mask=null;ST._cropRect=null;
+  ST.result=ST.img;
   document.getElementById('crop-rect').style.display='none';
-  document.getElementById('btn-do-crop').disabled=true;
+  const btn=document.getElementById('btn-do-crop');if(btn)btn.disabled=true;
+  const info=document.getElementById('adj-crop-info');if(info)info.textContent='drag on canvas to crop';
+  const prev=document.getElementById('adj-crop-prev');
+  if(prev){prev.getContext('2d').clearRect(0,0,prev.width,prev.height);}
+  if(document.getElementById('adj-rw'))document.getElementById('adj-rw').value=cr.w;
+  if(document.getElementById('adj-rh'))document.getElementById('adj-rh').value=cr.h;
   loadId(ST.img,cr.w,cr.h);posCanvas();
+  setFTool('select');
+  renderCurrentView();
   toast('cropped to '+cr.w+'×'+cr.h,'ok');
 }
+
 function adjCancelCrop(){
-  ST._cropRect=null;document.getElementById('crop-rect').style.display='none';
+  ST._cropRect=null;
+  const cr=document.getElementById('crop-rect');if(cr)cr.style.display='none';
   const btn=document.getElementById('btn-do-crop');if(btn)btn.disabled=true;
+  const info=document.getElementById('adj-crop-info');if(info)info.textContent='drag on canvas to crop';
+  const prev=document.getElementById('adj-crop-prev');
+  if(prev){prev.getContext('2d').clearRect(0,0,prev.width,prev.height);}
 }
 
 // ─── COLOUR ADJUSTMENTS (non-destructive live preview) ───────
@@ -3389,14 +3556,18 @@ function applyAdjustments(){
     }
     dst.data.set(blr.data);
   }
-  ST.result=dst;showOnCanvas(dst);
+  ST.result=dst;
+  renderCurrentView();
 }
 
 function adjCommit(){
   if(!ST.result){toast('no adjustments to commit','err');return;}
   pushHistory('commit adjustments');
   ST.img=ST.result;ST.imgW=ST.result.width;ST.imgH=ST.result.height;
+  ADJ_DEFS.forEach(d=>{ADJ[d.id]=d.def;});
+  buildAdjSliders();
   loadId(ST.img,ST.imgW,ST.imgH);
+  renderCurrentView();
   toast('adjustments baked into source','ok');
 }
 
