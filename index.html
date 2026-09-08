@@ -453,7 +453,11 @@ body.drag-over #cvs-area{outline:2px dashed var(--acc);outline-offset:-6px;}
   </div>
 
   <div id="pane-params">
-    <div style="color:var(--t3);font-family:var(--font-mono);font-size:10px;padding:4px 0;">← select an effect</div>
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 16px;text-align:center;gap:8px;color:var(--t3);user-select:none;">
+      <div style="font-size:24px;opacity:0.5;">⬡</div>
+      <div style="font-family:var(--font-mono);font-size:11px;color:var(--t2);">no effect selected</div>
+      <div style="font-family:var(--font-mono);font-size:9.5px;line-height:1.5;max-width:190px;color:var(--t3);">select an effect or generator from the sidebar to adjust parameters</div>
+    </div>
   </div>
 
 
@@ -4018,7 +4022,7 @@ window.addEventListener('dragstart',e=>{
   renderSidebar();
   document.getElementById('scr-editor').value='// Select an effect and click </> to open it here\n// Or write from scratch and deploy';
   document.querySelectorAll('#pane-mask input[type=range]').forEach(el=>{el.style.setProperty('--v',((parseFloat(el.value)-parseFloat(el.min))/(parseFloat(el.max)-parseFloat(el.min))*100).toFixed(1)+'%');});
-  selectKey('scanline_tear');
+  renderParams(null, null);
   buildAdjSliders();
   updateBracketUI('luma');
   updateBracketUI('hue');
