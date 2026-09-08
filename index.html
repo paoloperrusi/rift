@@ -1908,7 +1908,27 @@ function effRow(key,ef,cat){
 }
 
 // ═══════════════════════ EFFECT SELECTION ════════════════════
+function unloadActiveKey(){
+  ST.activeKey=null;
+  ST.activeParams={};
+  hideXYHair();
+  ST.xyParamX=null;ST.xyParamY=null;ST.xyActive=false;
+  renderSidebar();
+  renderParams(null,null);
+  if(ST.img){
+    ST.result=ST.img;
+    renderCurrentView();
+  } else {
+    ST.result=null;
+    renderCurrentView();
+  }
+}
+
 function selectKey(key){
+  if(ST.activeKey===key){
+    unloadActiveKey();
+    return;
+  }
   ST.activeKey=key;
   const ef=EFX[key]||GEN[key];if(!ef)return;
   ST.activeParams={};for(const p of ef.params)ST.activeParams[p.id]=p.def;
@@ -1918,6 +1938,15 @@ function selectKey(key){
 
 function renderParams(ef,key){
   const panel=document.getElementById('pane-params');
+  if(!panel)return;
+  if(!ef||!key){
+    panel.innerHTML=`<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 16px;text-align:center;gap:8px;color:var(--t3);user-select:none;">
+      <div style="font-size:24px;opacity:0.5;">⬡</div>
+      <div style="font-family:var(--font-mono);font-size:11px;color:var(--t2);">no effect selected</div>
+      <div style="font-family:var(--font-mono);font-size:9.5px;line-height:1.5;max-width:190px;color:var(--t3);">select an effect or generator from the sidebar to adjust parameters</div>
+    </div>`;
+    return;
+  }
   const isGen=!!GEN[key];const cat=ef.cat;
   let h=`<div style="padding:10px 12px 0"><div class="p-eff-head"><div><div class="p-eff-name">${ef.name}</div><div class="p-eff-cat"><span class="p-cat-dot" style="background:${CC[cat]||'#888'}"></span>${cat}</div></div></div>`;
   // description
@@ -1970,9 +1999,10 @@ function renderParams(ef,key){
     h+=`</div></div><div class="p-divider" style="margin:0 0 8px"></div>`;
   }
   if(isGen){
-    h+=`<div style="padding:0 12px 10px"><button class="btn acc" style="width:100%" onclick="runGen()">⬡ generate</button></div>`;
+    h+=`<div style="padding:0 12px 6px"><button class="btn acc" style="width:100%" onclick="runGen()" title="Bake generated pattern into working image">⬡ generate</button></div>`;
+    h+=`<div class="p-actions" style="padding:0 12px 10px"><button class="btn sm" style="flex:1" onclick="randParams()" title="Randomize generator parameters">⚄ randomize</button><button class="btn sm ghost" style="flex:1" onclick="resetParams()" title="Reset to default parameters">↺ reset</button></div>`;
   }else{
-    h+=`<div class="p-actions" style="padding:0 12px 10px"><button class="btn sm" style="flex:1" onclick="randParams()">⚄ randomize</button><button class="btn sm ghost" style="flex:1" onclick="resetParams()">↺ reset</button></div>`;
+    h+=`<div class="p-actions" style="padding:0 12px 10px"><button class="btn sm" style="flex:1" onclick="randParams()" title="Randomize effect parameters">⚄ randomize</button><button class="btn sm ghost" style="flex:1" onclick="resetParams()" title="Reset to default parameters">↺ reset</button></div>`;
   }
   panel.innerHTML=h;
 }
@@ -2055,8 +2085,22 @@ function applyMaskBlend(srcImg, effectImg){
 }
 
 function renderCurrentView(){
-  if(!ST.img)return;
+  const cvs=document.getElementById('main-cvs');
+  const dropHint=document.getElementById('drop-hint');
   const splitBar=document.getElementById('split-bar');
+  
+  if(!ST.img&&!ST.result){
+    if(dropHint)dropHint.style.display='flex';
+    if(cvs)cvs.style.display='none';
+    if(splitBar)splitBar.style.display='none';
+    return;
+  }
+  if(!ST.img&&ST.result){
+    if(splitBar)splitBar.style.display='none';
+    loadId(ST.result,ST.result.width,ST.result.height);
+    return;
+  }
+  
   if(ST.view==='orig'){
     if(splitBar)splitBar.style.display='none';
     loadId(ST.img,ST.imgW,ST.imgH);
@@ -2071,7 +2115,18 @@ function renderCurrentView(){
     const c=document.createElement('canvas');c.width=w;c.height=h;
     const ctx=c.getContext('2d');
     ctx.putImageData(ST.img,0,0);
-    ctx.putImageData(res,0,0,splitX,0,w-splitX,h);
+    if(res.width===w&&res.height===h){
+      ctx.putImageData(res,0,0,splitX,0,w-splitX,h);
+    } else {
+      const tc=document.createElement('canvas');tc.width=res.width;tc.height=res.height;
+      tc.getContext('2d').putImageData(res,0,0);
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(splitX,0,w-splitX,h);
+      ctx.clip();
+      ctx.drawImage(tc,0,0,w,h);
+      ctx.restore();
+    }
     loadId(ctx.getImageData(0,0,w,h),w,h);
     updateSplitBarPos();
   }
@@ -2120,7 +2175,12 @@ function previewEff(){
 
 function previewGen(){
   const gen=GEN[ST.activeKey];if(!gen)return;
-  const w=Math.min(ST.imgW||400,400),h=Math.min(ST.imgH||300,300);
+  const maxDim=800;
+  let w=ST.imgW||800,h=ST.imgH||600;
+  if(w>maxDim||h>maxDim){
+    const s=maxDim/Math.max(w,h);
+    w=Math.round(w*s);h=Math.round(h*s);
+  }
   try{
     const c=gen.fn(w,h,{...ST.activeParams});
     const ctx2=c.getContext('2d');
@@ -2139,6 +2199,10 @@ function runGen(){
       const id=ctx2.getImageData(0,0,w,h);
       pushHistory('generate '+gen.name);
       ST.img=id;ST.imgW=w;ST.imgH=h;ST.result=id;ST.mask=null;
+      if(!ST.origImg){
+        ST.origImg=mkId(w,h);
+        ST.origImg.data.set(id.data);
+      }
       loadId(id,w,h);
       zoomFit();
       toast('generated: '+gen.name+' '+w+'×'+h,'ok');
