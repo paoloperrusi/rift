@@ -591,7 +591,7 @@ body.drag-over #cvs-area{outline:2px dashed var(--acc);outline-offset:-6px;}
       </div>
       <div style="display:flex;gap:6px;align-items:center;margin-top:2px;">
         <span style="font-family:var(--font-mono);font-size:9px;color:var(--t2);">sens</span>
-        <input type="range" id="mask-edge-sens" min="0.2" max="5.0" step="0.1" value="1.5" oninput="document.getElementById('mask-edge-val').textContent=parseFloat(this.value).toFixed(1)+'×';if(ST.maskUseEdge)recomputeAutoMask();">
+        <input type="range" id="mask-edge-sens" min="0.2" max="5.0" step="0.1" value="1.5" oninput="updEdgeSens(this)">
       </div>
     </div>
   </div>
@@ -2347,6 +2347,16 @@ function updM(type,el){
   else if(type==='opacity'){MBR.opacity=v/100;document.getElementById('mv-op').textContent=(v/100).toFixed(2);}
 }
 
+function updEdgeSens(el){
+  const v=parseFloat(el.value);
+  const min=parseFloat(el.min), max=parseFloat(el.max);
+  const pct=((v-min)/(max-min)*100).toFixed(1)+'%';
+  el.style.setProperty('--v',pct);
+  const valEl=document.getElementById('mask-edge-val');
+  if(valEl)valEl.textContent=v.toFixed(1)+'×';
+  if(ST.maskUseEdge)recomputeAutoMask();
+}
+
 function rgbToHue(r,g,b){
   r/=255;g/=255;b/=255;
   const max=Math.max(r,g,b),min=Math.min(r,g,b);
@@ -2604,7 +2614,15 @@ function setRpTab(tab,el){
   const pa=document.getElementById('pane-adjust');if(pa)pa.style.display=tab==='adjust'?'flex':'none';
   document.getElementById('pane-mask').style.display=tab==='mask'?'flex':'none';
   document.getElementById('pane-script').style.display=tab==='script'?'flex':'none';
-  if(tab==='mask'){renderMaskCanvas();updateBracketUI('luma');updateBracketUI('hue');}
+  if(tab==='mask'){
+    renderMaskCanvas();
+    updateBracketUI('luma');
+    updateBracketUI('hue');
+    document.querySelectorAll('#pane-mask input[type=range]').forEach(el=>{
+      const min=parseFloat(el.min)||0, max=parseFloat(el.max)||100, v=parseFloat(el.value)||0;
+      el.style.setProperty('--v',((v-min)/(max-min)*100).toFixed(1)+'%');
+    });
+  }
   if(tab==='adjust'){buildAdjSliders();}
 }
 function unlockScr(){openModal('modal-warn');}
