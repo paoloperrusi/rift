@@ -290,6 +290,7 @@ select.adj-inp{cursor:pointer;}
 .zoom-display{font-family:var(--font-mono);font-size:10px;color:var(--t1);background:var(--bg3);border:1px solid var(--ln2);border-radius:var(--r);padding:0 8px;height:24px;display:flex;align-items:center;min-width:48px;justify-content:center;cursor:ns-resize;user-select:none;transition:all var(--ease);}
 .zoom-display:hover{background:var(--bg4);color:var(--t0);border-color:var(--ln3);}
 .zoom-display.scrubbing{background:var(--dim);border-color:var(--acc);color:var(--acc2);box-shadow:0 0 8px rgba(108,92,231,.35);}
+body.scrubbing-active, body.scrubbing-active *{cursor:ns-resize !important;}
 
 .ftool{width:26px;height:26px;background:rgba(14,14,19,.9);border:1px solid var(--ln2);border-radius:var(--r);color:var(--t2);font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all var(--ease);backdrop-filter:blur(4px);}
 .ftool:hover{background:var(--bg4);color:var(--t1);border-color:var(--ln3);}
@@ -332,7 +333,7 @@ body.drag-over #cvs-area{outline:2px dashed var(--acc);outline-offset:-6px;}
       <circle cx="8" cy="8" r="1.5" fill="currentColor"/>
     </svg>
   </button>
-  <span id="zoom-display" class="zoom-display" onmousedown="onZoomDisplayDown(event)" onwheel="onZoomDisplayWheel(event)" onauxclick="if(event.button===1){event.preventDefault();zoom100();}" ondblclick="zoom100()" title="Drag right/up to zoom in, left/down to zoom out | Scroll wheel | Middle-click: 100%">100%</span>
+  <span id="zoom-display" class="zoom-display" onmousedown="onZoomDisplayDown(event)" onwheel="onZoomDisplayWheel(event)" onauxclick="if(event.button===1){event.preventDefault();zoom100();}" ondblclick="zoom100()" title="Drag up/down: zoom (5%–4000%) | Scroll wheel: ±5% | Middle-click / double-click: 100%">100%</span>
   <div class="tbr">
     <div style="display:flex;align-items:center;gap:3px;">
       <button class="btn sm icon-btn" id="btn-undo" onclick="undo()" title="Undo (Ctrl+Z)" disabled>↶</button>
@@ -3182,7 +3183,7 @@ function cvWheel(e){
   }else{
     newPct=Math.ceil(curPct/5)*5-step;
   }
-  newPct=Math.max(5,Math.min(2000,newPct));
+  newPct=Math.max(5,Math.min(4000,newPct));
   
   const newZoom=newPct/100;
   const imgX=(mx-(aw-cvs.width*VP.zoom)/2-VP.panX)/VP.zoom;
@@ -3202,21 +3203,32 @@ function zoomFit(){
 function zoom100(){VP.zoom=1;VP.panX=0;VP.panY=0;posCanvas();}
 
 let _isZoomScrubbing = false;
-let _zoomScrubStartX = 0;
-let _zoomScrubStartY = 0;
-let _zoomScrubStartPct = 100;
+let _lastClientY = null;
 
 function onZoomDisplayDown(e){
   if(e.button !== 0) return;
   e.preventDefault();
   _isZoomScrubbing = true;
-  _zoomScrubStartX = e.clientX;
-  _zoomScrubStartY = e.clientY;
-  _zoomScrubStartPct = Math.round(VP.zoom * 100);
+  _lastClientY = e.clientY;
   
   const zd = document.getElementById('zoom-display');
   if(zd) zd.classList.add('scrubbing');
-  document.body.style.cursor = 'ew-resize';
+  document.body.classList.add('scrubbing-active');
+  
+  const vc = document.getElementById('virtual-cursor');
+  if(vc){
+    vc.style.left = e.clientX + 'px';
+    vc.style.top = e.clientY + 'px';
+    vc.style.display = 'block';
+  }
+  
+  const lockTarget = zd || document.body;
+  if(lockTarget.requestPointerLock){
+    try {
+      const p = lockTarget.requestPointerLock();
+      if(p && p.catch) p.catch(()=>{});
+    } catch(err){}
+  }
   
   window.addEventListener('mousemove', onZoomDisplayMove);
   window.addEventListener('mouseup', onZoomDisplayUp);
@@ -3224,25 +3236,56 @@ function onZoomDisplayDown(e){
 
 function onZoomDisplayMove(e){
   if(!_isZoomScrubbing) return;
-  const dy = _zoomScrubStartY - e.clientY;
-  const dx = e.clientX - _zoomScrubStartX;
-  // Dragging right OR up increases zoom; dragging left OR down decreases zoom.
-  const delta = dy + dx;
-  const speed = e.shiftKey ? 0.4 : 1.8;
-  let newPct = Math.round(_zoomScrubStartPct + delta * speed);
-  newPct = Math.max(25, Math.min(500, newPct));
+  
+  let dy = 0;
+  if(document.pointerLockElement){
+    if(Math.abs(e.movementY) < 300){
+      dy = -e.movementY;
+    }
+  } else {
+    if(_lastClientY !== null){
+      dy = _lastClientY - e.clientY;
+    }
+    _lastClientY = e.clientY;
+  }
+  
+  if(dy === 0) return;
+  
+  const curPct = Math.round(VP.zoom * 100);
+  const factor = 1 + dy * (e.shiftKey ? 0.003 : 0.015);
+  let newPct = Math.round(curPct * factor);
+  
+  if(!e.shiftKey){
+    newPct = Math.round(newPct / 5) * 5;
+    if(newPct === curPct){
+      newPct += (dy > 0 ? 5 : -5);
+    }
+  }
+  newPct = Math.max(5, Math.min(4000, newPct));
   setZoomPct(newPct);
 }
 
 function onZoomDisplayUp(e){
   if(!_isZoomScrubbing) return;
   _isZoomScrubbing = false;
-  document.body.style.cursor = '';
+  _lastClientY = null;
+  document.body.classList.remove('scrubbing-active');
+  const vc = document.getElementById('virtual-cursor');
+  if(vc) vc.style.display = 'none';
   const zd = document.getElementById('zoom-display');
   if(zd) zd.classList.remove('scrubbing');
+  if(document.exitPointerLock && document.pointerLockElement){
+    try { document.exitPointerLock(); } catch(err){}
+  }
   window.removeEventListener('mousemove', onZoomDisplayMove);
   window.removeEventListener('mouseup', onZoomDisplayUp);
 }
+
+document.addEventListener('pointerlockchange', ()=>{
+  if(!document.pointerLockElement && _isZoomScrubbing){
+    onZoomDisplayUp();
+  }
+});
 
 function onZoomDisplayWheel(e){
   e.preventDefault();
@@ -3257,7 +3300,7 @@ function onZoomDisplayWheel(e){
   }else{
     newPct=Math.ceil(curPct/5)*5-step;
   }
-  newPct=Math.max(25,Math.min(500,newPct));
+  newPct=Math.max(5,Math.min(4000,newPct));
   setZoomPct(newPct);
 }
 
@@ -4171,5 +4214,12 @@ window.addEventListener('dragstart',e=>{
   toast('RIFT v0.3 — drop an image or pick a generator','info');
 })();
 </script>
+<div id="virtual-cursor" style="display:none;position:fixed;pointer-events:none;z-index:99999;transform:translate(-50%,-50%);">
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="filter:drop-shadow(0 1px 3px rgba(0,0,0,0.9));">
+    <polyline points="8 6 12 2 16 6"/>
+    <line x1="12" y1="2" x2="12" y2="22"/>
+    <polyline points="8 18 12 22 16 18"/>
+  </svg>
+</div>
 </body>
 </html>
