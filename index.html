@@ -42,6 +42,8 @@ body{font-family:var(--font-ui);font-size:13px;display:flex;flex-direction:colum
 .btn.danger:hover{background:rgba(224,84,110,.1);}
 .btn.sm{height:24px;min-height:24px;padding:0 8px;font-size:10.5px;line-height:1;}
 .btn.icon-btn{padding:0;width:25px;justify-content:center;}
+.btn.btn-revert{color:var(--red);border-color:rgba(224,84,110,.35);background:rgba(224,84,110,.08);}
+.btn.btn-revert:hover{background:rgba(224,84,110,.22);border-color:var(--red);color:#fff;}
 
 /* APP */
 #app{flex:1;display:flex;overflow:hidden;min-height:0;}
@@ -357,7 +359,7 @@ body.drag-over #cvs-area{outline:2px dashed var(--acc);outline-offset:-6px;}
       <button class="btn sm icon-btn" id="btn-undo" onclick="undo()" title="Undo (Ctrl+Z)" disabled>↶</button>
       <button class="btn sm icon-btn" id="btn-redo" onclick="redo()" title="Redo (Ctrl+Y)" disabled>↷</button>
       <button class="btn sm icon-btn" onclick="resetToOrig()" title="Reset uncommitted preview to current source (↺)">↺</button>
-      <button class="btn sm icon-btn" onclick="revertToInitial()" title="Revert all changes back to original image (⎌)">⎌</button>
+      <button class="btn sm icon-btn btn-revert" onclick="revertToInitial()" title="Revert all changes back to original image (⎌)">⎌</button>
     </div>
     <div class="tb-sep" style="height:18px;margin:0 2px;"></div>
     <button class="btn acc sm" onclick="applyEffect()" style="padding:0 12px;font-weight:600;gap:4px;" title="Bake effect into working image (Ctrl+Enter)">✓ apply</button>
