@@ -3204,88 +3204,92 @@ function zoom100(){VP.zoom=1;VP.panX=0;VP.panY=0;posCanvas();}
 
 let _isZoomScrubbing = false;
 let _lastClientY = null;
+let _currentClientY = null;
+let _edgeScrollAnim = null;
 
 function onZoomDisplayDown(e){
   if(e.button !== 0) return;
   e.preventDefault();
   _isZoomScrubbing = true;
   _lastClientY = e.clientY;
+  _currentClientY = e.clientY;
   
   const zd = document.getElementById('zoom-display');
   if(zd) zd.classList.add('scrubbing');
   document.body.classList.add('scrubbing-active');
   
-  const vc = document.getElementById('virtual-cursor');
-  if(vc){
-    vc.style.left = e.clientX + 'px';
-    vc.style.top = e.clientY + 'px';
-    vc.style.display = 'block';
-  }
-  
-  const lockTarget = zd || document.body;
-  if(lockTarget.requestPointerLock){
-    try {
-      const p = lockTarget.requestPointerLock();
-      if(p && p.catch) p.catch(()=>{});
-    } catch(err){}
-  }
-  
   window.addEventListener('mousemove', onZoomDisplayMove);
   window.addEventListener('mouseup', onZoomDisplayUp);
+  
+  cancelAnimationFrame(_edgeScrollAnim);
+  _edgeScrollAnim = requestAnimationFrame(checkZoomEdgeScroll);
+}
+
+function checkZoomEdgeScroll(){
+  if(!_isZoomScrubbing) return;
+  
+  if(_currentClientY !== null){
+    const curPct = Math.round(VP.zoom * 100);
+    // When held near the top screen edge (within 10px of top)
+    if(_currentClientY <= 10 && curPct < 4000){
+      const factor = 1 + Math.max(0.015, (12 - _currentClientY) * 0.005);
+      let newPct = Math.round(curPct * factor);
+      newPct = Math.round(newPct / 5) * 5;
+      if(newPct === curPct) newPct += 5;
+      newPct = Math.min(4000, newPct);
+      setZoomPct(newPct);
+    } 
+    // When held near the bottom screen edge (within 10px of bottom)
+    else if(_currentClientY >= window.innerHeight - 10 && curPct > 5){
+      const factor = 0.97;
+      let newPct = Math.round(curPct * factor);
+      newPct = Math.round(newPct / 5) * 5;
+      if(newPct === curPct) newPct -= 5;
+      newPct = Math.max(5, newPct);
+      setZoomPct(newPct);
+    }
+  }
+  
+  _edgeScrollAnim = requestAnimationFrame(checkZoomEdgeScroll);
 }
 
 function onZoomDisplayMove(e){
   if(!_isZoomScrubbing) return;
+  _currentClientY = e.clientY;
   
-  let dy = 0;
-  if(document.pointerLockElement){
-    if(Math.abs(e.movementY) < 300){
-      dy = -e.movementY;
+  if(_lastClientY !== null){
+    const dy = _lastClientY - e.clientY;
+    if(dy !== 0){
+      const curPct = Math.round(VP.zoom * 100);
+      const factor = 1 + dy * (e.shiftKey ? 0.004 : 0.018);
+      let newPct = Math.round(curPct * factor);
+      if(!e.shiftKey){
+        newPct = Math.round(newPct / 5) * 5;
+        if(newPct === curPct){
+          newPct += (dy > 0 ? 5 : -5);
+        }
+      }
+      newPct = Math.max(5, Math.min(4000, newPct));
+      setZoomPct(newPct);
+      _lastClientY = e.clientY;
     }
   } else {
-    if(_lastClientY !== null){
-      dy = _lastClientY - e.clientY;
-    }
     _lastClientY = e.clientY;
   }
-  
-  if(dy === 0) return;
-  
-  const curPct = Math.round(VP.zoom * 100);
-  const factor = 1 + dy * (e.shiftKey ? 0.003 : 0.015);
-  let newPct = Math.round(curPct * factor);
-  
-  if(!e.shiftKey){
-    newPct = Math.round(newPct / 5) * 5;
-    if(newPct === curPct){
-      newPct += (dy > 0 ? 5 : -5);
-    }
-  }
-  newPct = Math.max(5, Math.min(4000, newPct));
-  setZoomPct(newPct);
 }
 
 function onZoomDisplayUp(e){
   if(!_isZoomScrubbing) return;
   _isZoomScrubbing = false;
   _lastClientY = null;
+  _currentClientY = null;
+  cancelAnimationFrame(_edgeScrollAnim);
   document.body.classList.remove('scrubbing-active');
-  const vc = document.getElementById('virtual-cursor');
-  if(vc) vc.style.display = 'none';
   const zd = document.getElementById('zoom-display');
   if(zd) zd.classList.remove('scrubbing');
-  if(document.exitPointerLock && document.pointerLockElement){
-    try { document.exitPointerLock(); } catch(err){}
-  }
   window.removeEventListener('mousemove', onZoomDisplayMove);
   window.removeEventListener('mouseup', onZoomDisplayUp);
 }
-
-document.addEventListener('pointerlockchange', ()=>{
-  if(!document.pointerLockElement && _isZoomScrubbing){
-    onZoomDisplayUp();
-  }
-});
 
 function onZoomDisplayWheel(e){
   e.preventDefault();
@@ -4214,12 +4218,5 @@ window.addEventListener('dragstart',e=>{
   toast('RIFT v0.3 — drop an image or pick a generator','info');
 })();
 </script>
-<div id="virtual-cursor" style="display:none;position:fixed;pointer-events:none;z-index:99999;transform:translate(-50%,-50%);">
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="filter:drop-shadow(0 1px 3px rgba(0,0,0,0.9));">
-    <polyline points="8 6 12 2 16 6"/>
-    <line x1="12" y1="2" x2="12" y2="22"/>
-    <polyline points="8 18 12 22 16 18"/>
-  </svg>
-</div>
 </body>
 </html>
