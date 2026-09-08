@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>RIFT — Image Fracture Tool</title>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Syne:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;1,300&display=swap');
 :root{
   --bg0:#07070a;--bg1:#0e0e13;--bg2:#14141a;--bg3:#1c1c24;--bg4:#24242e;--bg5:#2e2e3a;
   --ln:#1e1e28;--ln2:#2c2c3a;--ln3:#3a3a4a;
   --t0:#eeecf8;--t1:#9896aa;--t2:#56546a;--t3:#35344a;
   --acc:#6c5ce7;--acc2:#a29bfe;--acc3:#d6d0ff;--dim:rgba(108,92,231,.14);
   --red:#e0546e;--grn:#3dd68c;--amb:#f09a44;--cyn:#38d5c8;--pnk:#d960a8;--yel:#f5d744;
-  --font-mono:'JetBrains Mono',monospace;--font-ui:'Syne',sans-serif;
+  --font-mono:'JetBrains Mono',monospace;--font-ui:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
   --r:5px;--rl:10px;--ease:110ms cubic-bezier(.4,0,.2,1);
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
@@ -520,17 +520,37 @@ body.drag-over #cvs-area{outline:2px dashed var(--acc);outline-offset:-6px;}
     <div class="pr"><div class="pl"><span class="pl-name">opacity</span><span class="pl-val" id="mv-op">1.0</span></div>
       <input type="range" min="0" max="100" value="100" oninput="updM('opacity',this)"></div>
     <div class="p-divider"></div>
-    <div class="pr"><div class="pl"><span class="pl-name">luma selection</span></div>
-      <div class="luma-row">
-        <div class="ltag" onclick="lumaMask('shadows',this)">shadows</div>
-        <div class="ltag" onclick="lumaMask('mids',this)">mids</div>
-        <div class="ltag" onclick="lumaMask('highs',this)">highs</div>
+    <div class="pr">
+      <div class="pl"><span class="pl-name">light range mask</span><span class="pl-val" id="mask-luma-val">0 – 255</span></div>
+      <div style="height:12px;border-radius:3px;border:1px solid var(--ln2);background:linear-gradient(to right,#000 0%,#fff 100%);margin-bottom:6px;"></div>
+      <div style="display:flex;gap:6px;align-items:center;">
+        <span style="font-family:var(--font-mono);font-size:9px;color:var(--t2);">min</span>
+        <input type="range" id="mask-luma-min" min="0" max="255" value="0" oninput="applyLumaRangeMask()">
+        <span style="font-family:var(--font-mono);font-size:9px;color:var(--t2);">max</span>
+        <input type="range" id="mask-luma-max" min="0" max="255" value="255" oninput="applyLumaRangeMask()">
       </div>
     </div>
-    <div class="pr"><div class="pl"><span class="pl-name">edge detect</span></div>
-      <button class="btn sm" style="width:100%" onclick="edgeMask()">sobel detect</button></div>
-    <div style="display:flex;gap:5px">
+    <div class="pr">
+      <div class="pl"><span class="pl-name">color range mask</span><span class="pl-val" id="mask-hue-val">0° – 360°</span></div>
+      <div style="height:12px;border-radius:3px;border:1px solid var(--ln2);background:linear-gradient(to right,#ff0000 0%,#ffff00 17%,#00ff00 33%,#00ffff 50%,#0000ff 67%,#ff00ff 83%,#ff0000 100%);margin-bottom:6px;"></div>
+      <div style="display:flex;gap:6px;align-items:center;">
+        <span style="font-family:var(--font-mono);font-size:9px;color:var(--t2);">min</span>
+        <input type="range" id="mask-hue-min" min="0" max="360" value="0" oninput="applyHueRangeMask()">
+        <span style="font-family:var(--font-mono);font-size:9px;color:var(--t2);">max</span>
+        <input type="range" id="mask-hue-max" min="0" max="360" value="360" oninput="applyHueRangeMask()">
+      </div>
+    </div>
+    <div class="pr">
+      <div class="pl"><span class="pl-name">edge detect (sobel)</span><span class="pl-val" id="mask-edge-val">1.5×</span></div>
+      <div style="display:flex;gap:6px;align-items:center;margin-bottom:5px;">
+        <span style="font-family:var(--font-mono);font-size:9px;color:var(--t2);">sens</span>
+        <input type="range" id="mask-edge-sens" min="0.2" max="5.0" step="0.1" value="1.5" oninput="document.getElementById('mask-edge-val').textContent=parseFloat(this.value).toFixed(1)+'×';edgeMask();">
+      </div>
+      <button class="btn sm" style="width:100%" onclick="edgeMask()">⚡ generate edge mask</button>
+    </div>
+    <div style="display:flex;gap:4px;margin-top:6px;">
       <button class="btn sm" style="flex:1" onclick="invertMask()">invert</button>
+      <button class="btn sm" style="flex:1" onclick="fillAllMask()">fill all</button>
       <button class="btn sm ghost" style="flex:1" onclick="clearMask()">clear</button>
     </div>
   </div>
@@ -564,26 +584,12 @@ body.drag-over #cvs-area{outline:2px dashed var(--acc);outline-offset:-6px;}
       <div id="scr-foot">
         <canvas id="scr-prev" onclick="scrPreview()"></canvas>
         <div class="scr-status" id="scr-st"><div class="ss-dot"></div><span>ready</span></div>
-        <div class="scr-btns">
-          <button class="btn sm acc" onclick="scrDeploy()">▶ deploy</button>
-          <button class="btn sm" onclick="scrPreview()">preview</button>
-          <button class="btn sm ghost" onclick="scrSave()">save .rift</button>
-          <button class="btn sm ghost" onclick="scrLoad()">load .rift</button>
-        </div>
-        <div class="scr-btns">
-          <button class="btn sm ghost" onclick="saveAsEffect()" title="Add deployed script to effects list">+ to effects</button>
-          <button class="btn sm ghost" onclick="saveAsGenerator()" title="Save as standalone generator">+ to generators</button>
-          <button class="btn sm ghost" onclick="saveAsPreset()" title="Save current run as a preset">+ to presets</button>
+        <div class="scr-btns" style="display:flex;gap:4px;flex-wrap:wrap;margin-top:6px;">
+          <button class="btn sm acc" onclick="scrDeploy()" title="Compile script, run live, and add to your library">▶ run & save to library</button>
+          <button class="btn sm ghost" onclick="scrSave()" title="Export .rift script file">↓ save .rift</button>
+          <button class="btn sm ghost" onclick="scrLoad()" title="Import .rift script file">↑ load .rift</button>
         </div>
       </div>
-    </div>
-  </div>
-
-  <div id="ps-area">
-    <input id="ps-name" type="text" placeholder="preset name…">
-    <div class="ps-row">
-      <button class="btn sm" style="flex:1" onclick="savePreset()">save preset</button>
-      <button class="btn sm ghost" onclick="loadFromScript()" title="Pull from script tab">⌥ from script</button>
     </div>
   </div>
 
@@ -1702,6 +1708,10 @@ function renderSidebar(){
     }
   } else {
     // PRESETS TAB
+    const createBox=document.createElement('div');
+    createBox.style.cssText='padding:8px 10px;border-bottom:1px solid var(--ln);display:flex;gap:4px;background:var(--bg2);';
+    createBox.innerHTML=`<input id="ps-name-sb" type="text" placeholder="new preset name…" style="flex:1;height:24px;background:var(--bg1);border:1px solid var(--ln2);border-radius:var(--r);color:var(--t0);font-family:var(--font-mono);font-size:10px;padding:0 6px;outline:none;" onkeydown="if(event.key==='Enter')saveCurrentAsPreset()"><button class="btn sm acc" onclick="saveCurrentAsPreset()" title="Save current effect/params as preset">+ save</button>`;
+    body.appendChild(createBox);
     body.appendChild(catHead('native presets','#a29bfe',Object.keys(NATIVE_PRESETS).length));
     for(const[name,pr] of Object.entries(NATIVE_PRESETS)){
       const row=document.createElement('div');row.className='prow';
@@ -2145,15 +2155,48 @@ let _mp=false;
 const MBR={size:20,hard:.8,opacity:1,tool:'paint'};
 document.getElementById('mask-cvs').addEventListener('mousedown',e=>{_mp=true;paintMask(e);});
 document.getElementById('mask-cvs').addEventListener('mousemove',e=>{if(_mp)paintMask(e);});
-document.addEventListener('mouseup',()=>{_mp=false;});
+function endMaskStroke(){
+  if(_mp){
+    _mp=false;
+    if(ST.img&&ST.activeKey&&ST.maskEnabled)previewEff();
+  }
+}
+document.getElementById('mask-cvs').addEventListener('mouseup',endMaskStroke);
+document.getElementById('mask-cvs').addEventListener('mouseleave',endMaskStroke);
+document.addEventListener('mouseup',endMaskStroke);
+
 function paintMask(e){
   if(!maskEnsure())return;
   const c=document.getElementById('mask-cvs');const rect=c.getBoundingClientRect();
   const cx2=(e.clientX-rect.left)/rect.width*ST.imgW,cy2=(e.clientY-rect.top)/rect.height*ST.imgH;
-  const r=MBR.size/c.width*ST.imgW;
-  for(let dy=-r;dy<=r;dy++)for(let dx=-r;dx<=r;dx++){const d=Math.sqrt(dx*dx+dy*dy);if(d>r)continue;const x=Math.round(cx2+dx),y=Math.round(cy2+dy);if(x<0||x>=ST.imgW||y<0||y>=ST.imgH)continue;const fo=1-Math.pow(d/r,2)*MBR.hard,val=Math.floor(fo*MBR.opacity*255);const i=y*ST.imgW+x;if(MBR.tool==='erase')ST.mask[i]=Math.max(0,ST.mask[i]-val);else ST.mask[i]=Math.min(255,ST.mask[i]+val);}
+  const r=Math.max(1, MBR.size/c.width*ST.imgW);
+  const rCeil=Math.ceil(r);
+  
+  for(let dy=-rCeil;dy<=rCeil;dy++){
+    for(let dx=-rCeil;dx<=rCeil;dx++){
+      const d=Math.sqrt(dx*dx+dy*dy);
+      if(d>r)continue;
+      const x=Math.round(cx2+dx),y=Math.round(cy2+dy);
+      if(x<0||x>=ST.imgW||y<0||y>=ST.imgH)continue;
+      
+      // Proper hardness curve: hard=1 is sharp; hard=0 is soft
+      const normD=d/r;
+      let fo=1;
+      if(normD>MBR.hard){
+        const t=(normD-MBR.hard)/(1-MBR.hard+0.0001);
+        fo=0.5*(1+Math.cos(Math.PI*t));
+      }
+      
+      const val=Math.round(fo*MBR.opacity*255);
+      const i=y*ST.imgW+x;
+      if(MBR.tool==='erase'){
+        ST.mask[i]=Math.max(0,ST.mask[i]-val);
+      } else {
+        ST.mask[i]=Math.max(ST.mask[i],val);
+      }
+    }
+  }
   renderMaskCanvas();
-  if(ST.img&&ST.activeKey&&ST.maskEnabled)previewEff();
 }
 function renderMaskCanvas(){
   const c=document.getElementById('mask-cvs'); if(!c) return;
@@ -2207,10 +2250,95 @@ function setMTool(tool,el){
   el.classList.add('on');
 }
 function updM(type,el){const v=parseFloat(el.value);el.style.setProperty('--v',((v-parseFloat(el.min))/(parseFloat(el.max)-parseFloat(el.min))*100).toFixed(1)+'%');if(type==='size'){MBR.size=v;document.getElementById('mv-sz').textContent=v;}else if(type==='hard'){MBR.hard=v/100;document.getElementById('mv-hd').textContent=(v/100).toFixed(2);}else if(type==='opacity'){MBR.opacity=v/100;document.getElementById('mv-op').textContent=(v/100).toFixed(2);}}
-function lumaMask(range){if(!ST.img)return;if(!ST.mask)ST.mask=new Uint8Array(ST.imgW*ST.imgH);for(let i=0;i<ST.imgW*ST.imgH;i++){const pi=i*4,l=luma(ST.img.data[pi],ST.img.data[pi+1],ST.img.data[pi+2]);ST.mask[i]=range==='shadows'?(l<85?255:0):range==='mids'?(l>=85&&l<170?255:0):(l>=170?255:0);}renderMaskCanvas();toast('luma mask applied','ok');}
-function edgeMask(){if(!ST.img)return;if(!ST.mask)ST.mask=new Uint8Array(ST.imgW*ST.imgH);const d=ST.img.data,w=ST.imgW,h=ST.imgH;for(let y=1;y<h-1;y++)for(let x=1;x<w-1;x++){const i=(y*w+x)*4;const gx=luma(d[i-4],d[i-3],d[i-2])-luma(d[i+4],d[i+5],d[i+6]),gy=luma(d[i-w*4],d[i-w*4+1],d[i-w*4+2])-luma(d[i+w*4],d[i+w*4+1],d[i+w*4+2]);ST.mask[y*w+x]=clamp(Math.sqrt(gx*gx+gy*gy)*2);}renderMaskCanvas();toast('edge mask applied','ok');}
-function invertMask(){if(!ST.mask)return;for(let i=0;i<ST.mask.length;i++)ST.mask[i]=255-ST.mask[i];renderMaskCanvas();}
-function clearMask(){ST.mask=null;renderMaskCanvas();}
+
+function applyLumaRangeMask(){
+  if(!ST.img)return;
+  if(!maskEnsure())return;
+  const minV=Math.min(parseFloat(document.getElementById('mask-luma-min')?.value||'0'), parseFloat(document.getElementById('mask-luma-max')?.value||'255'));
+  const maxV=Math.max(parseFloat(document.getElementById('mask-luma-min')?.value||'0'), parseFloat(document.getElementById('mask-luma-max')?.value||'255'));
+  const lbl=document.getElementById('mask-luma-val');if(lbl)lbl.textContent=`${Math.round(minV)} – ${Math.round(maxV)}`;
+  const d=ST.img.data, n=ST.imgW*ST.imgH;
+  for(let i=0;i<n;i++){
+    const pi=i*4;
+    const l=luma(d[pi],d[pi+1],d[pi+2]);
+    if(l>=minV&&l<=maxV){
+      ST.mask[i]=255;
+    } else {
+      const dist=Math.min(Math.abs(l-minV), Math.abs(l-maxV));
+      ST.mask[i]=dist<=12?Math.round((1-dist/12)*255):0;
+    }
+  }
+  renderMaskCanvas();
+  if(ST.img&&ST.activeKey)previewEff();
+}
+
+function rgbToHue(r,g,b){
+  r/=255;g/=255;b/=255;
+  const max=Math.max(r,g,b),min=Math.min(r,g,b);
+  if(max===min)return 0;
+  const d=max-min;
+  let h;
+  if(max===r)h=((g-b)/d+(g<b?6:0))/6;
+  else if(max===g)h=((b-r)/d+2)/6;
+  else h=((r-g)/d+4)/6;
+  return h*360;
+}
+
+function applyHueRangeMask(){
+  if(!ST.img)return;
+  if(!maskEnsure())return;
+  const minH=parseFloat(document.getElementById('mask-hue-min')?.value||'0');
+  const maxH=parseFloat(document.getElementById('mask-hue-max')?.value||'360');
+  const lbl=document.getElementById('mask-hue-val');if(lbl)lbl.textContent=`${Math.round(minH)}° – ${Math.round(maxH)}°`;
+  const d=ST.img.data, n=ST.imgW*ST.imgH;
+  for(let i=0;i<n;i++){
+    const pi=i*4;
+    const maxC=Math.max(d[pi],d[pi+1],d[pi+2]), minC=Math.min(d[pi],d[pi+1],d[pi+2]);
+    if(maxC-minC<12){ST.mask[i]=0;continue;}
+    const h=rgbToHue(d[pi],d[pi+1],d[pi+2]);
+    let inside=false;
+    if(minH<=maxH){
+      inside=(h>=minH&&h<=maxH);
+    } else {
+      inside=(h>=minH||h<=maxH);
+    }
+    ST.mask[i]=inside?255:0;
+  }
+  renderMaskCanvas();
+  if(ST.img&&ST.activeKey)previewEff();
+}
+
+function edgeMask(){
+  if(!ST.img)return;
+  if(!maskEnsure())return;
+  const mult=parseFloat(document.getElementById('mask-edge-sens')?.value||'1.5');
+  const d=ST.img.data,w=ST.imgW,h=ST.imgH;
+  for(let y=1;y<h-1;y++)for(let x=1;x<w-1;x++){
+    const i=(y*w+x)*4;
+    const gx=luma(d[i-4],d[i-3],d[i-2])-luma(d[i+4],d[i+5],d[i+6]);
+    const gy=luma(d[i-w*4],d[i-w*4+1],d[i-w*4+2])-luma(d[i+w*4],d[i+w*4+1],d[i+w*4+2]);
+    ST.mask[y*w+x]=clamp(Math.sqrt(gx*gx+gy*gy)*mult);
+  }
+  renderMaskCanvas();
+  if(ST.img&&ST.activeKey)previewEff();
+  toast('edge mask applied','ok');
+}
+
+function invertMask(){
+  if(!maskEnsure())return;
+  for(let i=0;i<ST.mask.length;i++)ST.mask[i]=255-ST.mask[i];
+  renderMaskCanvas();
+  if(ST.img&&ST.activeKey)previewEff();
+  toast('mask inverted','info');
+}
+
+function clearMask(){
+  if(!ST.mask)return;
+  ST.mask.fill(0);
+  renderMaskCanvas();
+  if(ST.img&&ST.activeKey)previewEff();
+  toast('mask cleared','info');
+}
 
 // ═══════════════════════ PRESETS ═════════════════════════════
 function applyPreset(pr){
@@ -2221,12 +2349,19 @@ function applyPreset(pr){
   renderCurrentView();
   toast('preset applied: '+(pr.name||''),'ok');
 }
-function savePreset(){
-  const name=document.getElementById('ps-name').value.trim()||('Preset '+Date.now());
-  if(!ST.activeKey&&!ST.seqSteps.length){toast('select an effect or build a sequence','err');return;}
+
+function saveCurrentAsPreset(){
+  const inp=document.getElementById('ps-name-sb');
+  const name=(inp?.value||'').trim()||('Preset '+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}));
+  if(!ST.activeKey&&!ST.seqSteps.length){toast('select an effect or build a sequence first','err');return;}
   const steps=ST.seqSteps.length?ST.seqSteps.map(s=>({key:s.key,p:{...s.p}})):[{key:ST.activeKey,p:{...ST.activeParams}}];
-  ST.userPresets.push({name,steps});document.getElementById('ps-name').value='';renderSidebar();toast('preset saved: '+name,'ok');
+  ST.userPresets.push({name,steps});
+  if(inp)inp.value='';
+  renderSidebar();
+  toast('saved preset: '+name,'ok');
 }
+const savePreset=saveCurrentAsPreset;
+
 function deletePreset(i,e){e.stopPropagation();ST.userPresets.splice(i,1);renderSidebar();}
 
 // ═══════════════════════ SCRIPT ══════════════════════════════
@@ -2244,7 +2379,6 @@ function setRpTab(tab,el){
   const pa=document.getElementById('pane-adjust');if(pa)pa.style.display=tab==='adjust'?'flex':'none';
   document.getElementById('pane-mask').style.display=tab==='mask'?'flex':'none';
   document.getElementById('pane-script').style.display=tab==='script'?'flex':'none';
-  document.getElementById('ps-area').style.display=tab==='script'?'none':'flex';
   if(tab==='mask'){renderMaskCanvas();}
   if(tab==='adjust'){buildAdjSliders();}
 }
