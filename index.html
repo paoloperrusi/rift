@@ -502,36 +502,40 @@ body.drag-over #cvs-area{outline:2px dashed var(--acc);outline-offset:-6px;}
           <div class="adj-btn" onclick="adjFlip('h')" title="Flip horizontally">↔ flip H</div>
           <div class="adj-btn" onclick="adjFlip('v')" title="Flip vertically">↕ flip V</div>
         </div>
-        <div class="adj-row">
-          <span class="adj-lbl" title="Custom rotation angle">angle °</span>
-          <input class="adj-inp" id="adj-angle" type="number" value="15" min="-360" max="360" title="Rotation angle in degrees">
-          <button class="btn sm icon-btn" onclick="adjRotateCustom()" title="Apply custom rotation (Enter)" style="min-width:24px;">↵</button>
-        </div>
-        <div class="adj-row">
-          <span class="adj-lbl" title="Background fill when rotating">fill</span>
-          <select class="adj-inp" id="adj-fill" title="Fill colour for empty areas after rotation">
-            <option value="black">black</option>
-            <option value="white">white</option>
-            <option value="wrap">wrap</option>
+        <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:4px;align-items:center;margin-top:6px;">
+          <div style="display:flex;align-items:center;background:var(--bg3);border:1px solid var(--ln2);border-radius:var(--r);padding:0 6px;height:24px;" title="Custom rotation angle in degrees">
+            <span style="font-family:var(--font-mono);font-size:9px;color:var(--t3);margin-right:4px;">∠</span>
+            <input class="adj-inp" id="adj-angle" type="number" value="15" min="-360" max="360" style="border:none;background:transparent;padding:0;height:100%;width:100%;text-align:right;" title="Rotation angle in degrees" onkeydown="if(event.key==='Enter')adjRotateCustom()">
+            <span style="font-family:var(--font-mono);font-size:9px;color:var(--t3);margin-left:2px;">°</span>
+          </div>
+          <select class="adj-inp" id="adj-fill" title="Fill colour for empty corner areas after rotation" style="height:24px;text-align:left;padding:0 5px;line-height:1;">
+            <option value="black">black fill</option>
+            <option value="white">white fill</option>
+            <option value="wrap">wrap edge</option>
           </select>
+          <button class="btn sm acc icon-btn" onclick="adjRotateCustom()" title="Apply custom rotation (Enter)" style="height:24px;min-width:26px;">↵</button>
         </div>
       </div>
       <div class="adj-sep"></div>
       <div class="adj-sec">
         <div class="adj-sec-title">resize canvas</div>
-        <div class="adj-row">
-          <span class="adj-lbl" title="Target width">W px</span>
-          <input class="adj-inp" id="adj-rw" type="number" value="800" min="1" max="8192" title="New width in pixels">
+        <div style="display:grid;grid-template-columns:1fr auto 1fr auto;align-items:center;gap:4px;margin-bottom:6px;">
+          <div style="display:flex;align-items:center;background:var(--bg3);border:1px solid var(--ln2);border-radius:var(--r);padding:0 6px;height:24px;" title="Target width in pixels">
+            <span style="font-family:var(--font-mono);font-size:9px;color:var(--t3);margin-right:4px;">W</span>
+            <input class="adj-inp" id="adj-rw" type="number" value="800" min="1" max="8192" style="border:none;background:transparent;padding:0;height:100%;width:100%;text-align:right;" title="Width in pixels" oninput="onResizeWInput(this.value)" onkeydown="if(event.key==='Enter')adjResize()">
+          </div>
+          <span style="font-family:var(--font-mono);font-size:10px;color:var(--t3);">×</span>
+          <div style="display:flex;align-items:center;background:var(--bg3);border:1px solid var(--ln2);border-radius:var(--r);padding:0 6px;height:24px;" title="Target height in pixels">
+            <span style="font-family:var(--font-mono);font-size:9px;color:var(--t3);margin-right:4px;">H</span>
+            <input class="adj-inp" id="adj-rh" type="number" value="600" min="1" max="8192" style="border:none;background:transparent;padding:0;height:100%;width:100%;text-align:right;" title="Height in pixels" oninput="onResizeHInput(this.value)" onkeydown="if(event.key==='Enter')adjResize()">
+          </div>
+          <button class="btn sm acc icon-btn" onclick="adjResize()" title="Apply canvas resize (Enter)" style="height:24px;min-width:26px;">↵</button>
         </div>
-        <div class="adj-row">
-          <span class="adj-lbl" title="Target height">H px</span>
-          <input class="adj-inp" id="adj-rh" type="number" value="600" min="1" max="8192" title="New height in pixels">
-          <button class="btn sm icon-btn" onclick="adjResize()" title="Apply resize (Enter)" style="min-width:24px;">↵</button>
-        </div>
-        <div class="adj-row">
-          <label style="font-family:var(--font-mono);font-size:9px;color:var(--t2);display:flex;align-items:center;gap:4px;cursor:pointer;user-select:none" title="Lock aspect ratio when resizing">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:0 2px;">
+          <label style="font-family:var(--font-mono);font-size:9px;color:var(--t2);display:flex;align-items:center;gap:5px;cursor:pointer;user-select:none" title="Lock aspect ratio when resizing">
             <input type="checkbox" id="adj-lock" checked> lock ratio
           </label>
+          <span id="adj-cur-dims" style="font-family:var(--font-mono);font-size:8.5px;color:var(--t3);">800 × 600 px</span>
         </div>
       </div>
     </div>
@@ -2267,6 +2271,8 @@ function loadId(id,w,h){
   cvs.getContext('2d').putImageData(id,0,0);
   cvs.style.display='block';
   document.getElementById('drop-hint').style.display='none';
+  const cd=document.getElementById('adj-cur-dims');
+  if(cd)cd.textContent=`${w} × ${h} px`;
   posCanvas();
 }
 
@@ -2836,7 +2842,9 @@ function setRpTab(tab,el){
   }
   if(tab==='adjust'){
     buildAdjSliders();
-    if(typeof setAdjSubtab==='function'){setAdjSubtab(_adjSubtab||'crop');}
+    if(typeof setAdjSubtab==='function'){setAdjSubtab('crop');}
+  } else if(tab==='params'){
+    if(typeof setFTool==='function'){setFTool('select');}
   } else {
     if(typeof _activeTool!=='undefined'&&_activeTool==='crop'&&typeof adjCancelCrop==='function'){adjCancelCrop();}
   }
@@ -3423,6 +3431,26 @@ function adjRotateCustom(){
   const deg=parseFloat(document.getElementById('adj-angle')?.value||'0');
   if(isNaN(deg))return;
   adjRotate(deg);
+}
+
+function onResizeWInput(val){
+  const lock = document.getElementById('adj-lock')?.checked;
+  if(!lock || !ST.imgW || !ST.imgH) return;
+  const w = parseInt(val);
+  if(isNaN(w) || w <= 0) return;
+  const ratio = ST.imgW / ST.imgH;
+  const hInput = document.getElementById('adj-rh');
+  if(hInput) hInput.value = Math.max(1, Math.round(w / ratio));
+}
+
+function onResizeHInput(val){
+  const lock = document.getElementById('adj-lock')?.checked;
+  if(!lock || !ST.imgW || !ST.imgH) return;
+  const h = parseInt(val);
+  if(isNaN(h) || h <= 0) return;
+  const ratio = ST.imgW / ST.imgH;
+  const wInput = document.getElementById('adj-rw');
+  if(wInput) wInput.value = Math.max(1, Math.round(h * ratio));
 }
 
 function adjResize(){
