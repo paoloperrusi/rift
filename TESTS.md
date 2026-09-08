@@ -19,7 +19,7 @@ RIFT manages four distinct image states:
 - **Batch 1: Canvas, Loading, Navigation & Viewport**
   - Clean startup state (no effect pre-selected, placeholder prompt)
   - Image loading: file picker (`O`), drag & drop, `✦ sample` button
-  - Viewport & Zoom: mouse wheel zoom, middle-click reset (100%), Zoom Fit icon, Zoom 100% icon, interactive Zoom popover with slider & 8 snap chips
+  - Viewport & Zoom: mouse wheel zoom, middle-click reset (100%), Zoom Fit icon, Zoom 100% icon, interactive Zoom percentage vertical scrub (25%–500%) & middle-click/double-click reset (100%)
   - View comparison modes: `○ orig` (<kbd>1</kbd>), `● result` (<kbd>2</kbd>), `◐ split` (<kbd>3</kbd>) with draggable divider
 
 - **Batch 2: Floating Toolbar & Adjust Subtabs Synchronization**
@@ -89,10 +89,12 @@ RIFT manages four distinct image states:
    - **Wheel Zoom**: Scroll mouse wheel over image to zoom in/out smoothly toward cursor.
    - **Zoom Fit Icon**: Click the fit icon (corners square) or press <kbd>Z</kbd>: image fits neatly within the viewport.
    - **Zoom 100% Icon**: Click the 1:1 icon (circle) or press <kbd>1</kbd>: image snaps to 100% actual pixels.
-   - **Zoom Percentage Chip & Popover**:
-     - Left-click `100%` chip: popover opens with live slider and 8 snap chips (`25%`, `50%`, `75%`, `100%`, `150%`, `200%`, `300%`, `500%`).
-     - Click any snap chip: zoom immediately jumps to that exact level and active chip highlights.
-     - Middle-click the percentage chip: zoom immediately resets to 100%.
+   - **Zoom Percentage Chip Scrubbing**:
+     - Hover over `100%` chip: cursor shows vertical resize (`ns-resize`).
+     - Left-click and drag upwards: zoom percentage scrubs upward smoothly up to `500%`, centered on viewport.
+     - Left-click and drag downwards: zoom percentage scrubs downward smoothly down to `25%`.
+     - Hold <kbd>Shift</kbd> while scrubbing: fine-grained precision zoom adjustments.
+     - Middle-click or double-click the percentage chip: zoom immediately snaps to `100%` actual pixels.
    - **Pan Navigation**:
      - Hold <kbd>Spacebar</kbd> and drag: cursor becomes grab hand, canvas moves smoothly.
      - Middle-click drag: canvas pans smoothly.
@@ -216,7 +218,7 @@ RIFT manages four distinct image states:
    - Select another effect and click `+`.
    - Click `▶ run`: executes pipeline sequentially and updates canvas preview.
    - Click `★` (save sequence as preset):
-     - Prompt modal opens asking for preset name.
+     - In-app modal (`#modal-preset-name`) opens asking for preset name with default name pre-filled and highlighted.
      - Press Enter without typing: automatically assigns a descriptive default name (e.g. `Scanline Tear + Dither`).
      - Sidebar switches to `Presets` tab and new preset appears under `SAVED PRESETS`.
 
@@ -225,7 +227,7 @@ RIFT manages four distinct image states:
    - Locate the top creation box: verify `[ preset name... ]` input and `[+ save]` button fit cleanly without clipping.
    - Type a name and click `+ save`: creates preset from current effect.
    - Under `SAVED PRESETS`:
-     - Click `✎` (rename) on any preset row: dialog prompts for new name; entering updates preset instantly.
+      - Click `✎` (rename) on any preset row: in-app modal (`#modal-preset-name`) opens with current name selected; entering updates preset instantly upon pressing Enter or clicking `rename`.
      - Click `✕` (delete): removes preset from list with toast notification.
      - Click preset name: applies full preset pipeline to canvas.
 

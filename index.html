@@ -328,35 +328,7 @@ body.drag-over #cvs-area{outline:2px dashed var(--acc);outline-offset:-6px;}
       <circle cx="8" cy="8" r="1.5" fill="currentColor"/>
     </svg>
   </button>
-  <div style="position:relative;display:inline-flex;">
-    <span id="zoom-display" style="font-family:var(--font-mono);font-size:10px;color:var(--t1);background:var(--bg3);border:1px solid var(--ln2);border-radius:var(--r);padding:0 8px;height:24px;display:flex;align-items:center;min-width:48px;justify-content:center;cursor:pointer;user-select:none;transition:all var(--ease);" onclick="toggleZoomPop(event)" onauxclick="if(event.button===1){event.preventDefault();zoom100();}" onmousedown="if(event.button===1)event.preventDefault();" title="Left-click: zoom slider (25%–500%) | Middle-click: reset 100%">100%</span>
-    <div id="zoom-popover" style="display:none;position:absolute;top:28px;left:0;background:var(--bg2);border:1px solid var(--ln2);border-radius:var(--r);padding:8px 10px;box-shadow:0 8px 24px rgba(0,0,0,.6);z-index:200;flex-direction:column;gap:7px;width:180px;">
-      <div style="display:flex;align-items:center;justify-content:space-between;">
-        <span style="font-family:var(--font-mono);font-size:9px;color:var(--t3);letter-spacing:.1em;text-transform:uppercase;">Zoom</span>
-        <span id="zoom-pop-val" style="font-family:var(--font-mono);font-size:11px;font-weight:600;color:var(--acc2);">100%</span>
-      </div>
-      <div class="slider-wrap" style="height:18px;">
-        <div class="slider-track-bg">
-          <div id="zoom-slider-fill" class="slider-fill-bar" style="left:0;width:15.8%;background:var(--acc);"></div>
-        </div>
-        <input type="range" id="zoom-slider" min="25" max="500" step="1" value="100"
-          class="slider-overlay"
-          oninput="onZoomSliderInput(this.value,event)"
-          onclick="event.stopPropagation()">
-        <div id="zoom-slider-thumb" class="slider-thumb-disc" style="left:15.8%;"></div>
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:3px;" onclick="event.stopPropagation()">
-        <button class="eff-pchip" onclick="applyZoomSnap(25)" id="zsnap-25" style="padding:0;height:20px;font-size:9px;">25%</button>
-        <button class="eff-pchip" onclick="applyZoomSnap(50)" id="zsnap-50" style="padding:0;height:20px;font-size:9px;">50%</button>
-        <button class="eff-pchip" onclick="applyZoomSnap(75)" id="zsnap-75" style="padding:0;height:20px;font-size:9px;">75%</button>
-        <button class="eff-pchip on" onclick="applyZoomSnap(100)" id="zsnap-100" style="padding:0;height:20px;font-size:9px;">100%</button>
-        <button class="eff-pchip" onclick="applyZoomSnap(150)" id="zsnap-150" style="padding:0;height:20px;font-size:9px;">150%</button>
-        <button class="eff-pchip" onclick="applyZoomSnap(200)" id="zsnap-200" style="padding:0;height:20px;font-size:9px;">200%</button>
-        <button class="eff-pchip" onclick="applyZoomSnap(300)" id="zsnap-300" style="padding:0;height:20px;font-size:9px;">300%</button>
-        <button class="eff-pchip" onclick="applyZoomSnap(500)" id="zsnap-500" style="padding:0;height:20px;font-size:9px;">500%</button>
-      </div>
-    </div>
-  </div>
+  <span id="zoom-display" style="font-family:var(--font-mono);font-size:10px;color:var(--t1);background:var(--bg3);border:1px solid var(--ln2);border-radius:var(--r);padding:0 8px;height:24px;display:flex;align-items:center;min-width:48px;justify-content:center;cursor:ns-resize;user-select:none;transition:border-color var(--ease),background var(--ease),color var(--ease);" onmousedown="onZoomDisplayDown(event)" onauxclick="if(event.button===1){event.preventDefault();zoom100();}" ondblclick="zoom100()" title="Drag up/down: zoom (25%–500%) | Middle-click / double-click: 100%">100%</span>
   <div class="tbr">
     <div style="display:flex;align-items:center;gap:3px;">
       <button class="btn sm icon-btn" id="btn-undo" onclick="undo()" title="Undo (Ctrl+Z)" disabled>↶</button>
@@ -771,6 +743,26 @@ body.drag-over #cvs-area{outline:2px dashed var(--acc);outline-offset:-6px;}
     <div class="mdl-foot" style="margin-top:6px;display:flex;gap:6px;justify-content:flex-end;">
       <button class="btn ghost sm" onclick="closeModal('modal-export')">cancel</button>
       <button class="btn acc sm" onclick="doExport()" style="padding:0 14px;font-weight:600;">↓ download</button>
+    </div>
+  </div>
+</div>
+
+<div class="ovl" id="modal-preset-name" style="display:none;" onclick="if(event.target===this)closeModal('modal-preset-name')">
+  <div class="mdl" style="width:340px;max-width:90vw;display:flex;flex-direction:column;gap:12px;">
+    <div class="mdl-title" style="display:flex;align-items:center;gap:6px;">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <polygon points="8 1.5 10.3 6.2 15.5 7 11.8 10.6 12.6 15.8 8 13.4 3.4 15.8 4.2 10.6 0.5 7 5.7 6.2 8 1.5"/>
+      </svg>
+      <span id="preset-modal-title">Save Preset</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px;">
+      <div style="font-family:var(--font-mono);font-size:9px;color:var(--t2);text-transform:uppercase;letter-spacing:.08em;" id="preset-modal-lbl">Preset Name</div>
+      <input id="preset-modal-input" type="text" style="height:28px;background:var(--bg3);border:1px solid var(--ln2);border-radius:var(--r);color:var(--t0);font-family:var(--font-mono);font-size:11px;padding:0 8px;outline:none;transition:border-color var(--ease);" onkeydown="if(event.key==='Enter')confirmPresetModal();">
+      <div style="font-family:var(--font-mono);font-size:8.5px;color:var(--t3);" id="preset-modal-hint">Leave blank to use default name</div>
+    </div>
+    <div class="mdl-foot" style="margin-top:2px;display:flex;gap:6px;justify-content:flex-end;">
+      <button class="btn ghost sm" onclick="closeModal('modal-preset-name')">cancel</button>
+      <button class="btn acc sm" id="preset-modal-confirm-btn" onclick="confirmPresetModal()" style="padding:0 12px;font-weight:600;">save</button>
     </div>
   </div>
 </div>
@@ -2816,17 +2808,84 @@ function saveCurrentAsPreset(){
 }
 const savePreset=saveCurrentAsPreset;
 
+let _presetModalMode = 'save_seq';
+let _presetModalIndex = null;
+let _presetModalDefaultName = '';
+
+function openPresetModal(mode, index){
+  _presetModalMode = mode;
+  _presetModalIndex = index !== undefined ? index : null;
+  const titleEl = document.getElementById('preset-modal-title');
+  const lblEl = document.getElementById('preset-modal-lbl');
+  const hintEl = document.getElementById('preset-modal-hint');
+  const inputEl = document.getElementById('preset-modal-input');
+  const confirmBtn = document.getElementById('preset-modal-confirm-btn');
+  
+  if(mode === 'save_seq'){
+    if(!ST.seqSteps.length && !ST.activeKey){
+      toast('add effects to sequence or select an effect first','err');
+      return;
+    }
+    _presetModalDefaultName = ST.seqSteps.length 
+      ? ST.seqSteps.map(s => (EFX[s.key]?.name || s.key)).slice(0, 3).join(' + ')
+      : (ST.activeKey ? (EFX[ST.activeKey]?.name || ST.activeKey) + ' Preset' : ('Preset ' + new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})));
+      
+    if(titleEl) titleEl.textContent = 'Save Preset';
+    if(lblEl) lblEl.textContent = 'Preset Name';
+    if(hintEl) hintEl.textContent = 'Leave blank to use default: ' + _presetModalDefaultName;
+    if(confirmBtn) confirmBtn.textContent = 'save';
+    if(inputEl) inputEl.value = _presetModalDefaultName;
+  } else if(mode === 'rename'){
+    const pr = ST.userPresets[index];
+    if(!pr) return;
+    _presetModalDefaultName = pr.name || '';
+    if(titleEl) titleEl.textContent = 'Rename Preset';
+    if(lblEl) lblEl.textContent = 'Preset Name';
+    if(hintEl) hintEl.textContent = 'Enter new preset name';
+    if(confirmBtn) confirmBtn.textContent = 'rename';
+    if(inputEl) inputEl.value = pr.name || '';
+  }
+  
+  openModal('modal-preset-name');
+  if(inputEl){
+    setTimeout(()=>{
+      inputEl.focus();
+      inputEl.select();
+    }, 50);
+  }
+}
+
+function confirmPresetModal(){
+  const inputEl = document.getElementById('preset-modal-input');
+  const entered = (inputEl?.value || '').trim();
+  
+  if(_presetModalMode === 'save_seq'){
+    const name = entered || _presetModalDefaultName;
+    const steps = ST.seqSteps.length
+      ? ST.seqSteps.map(s => ({ key: s.key, p: { ...s.p } }))
+      : [{ key: ST.activeKey, p: { ...ST.activeParams } }];
+    ST.userPresets.push({ name, steps });
+    const tabs = document.querySelectorAll('.sb-tab');
+    if(tabs[1]) setSbTab('presets', tabs[1]);
+    renderSidebar();
+    closeModal('modal-preset-name');
+    toast('saved preset: ' + name, 'ok');
+  } else if(_presetModalMode === 'rename'){
+    const pr = ST.userPresets[_presetModalIndex];
+    if(pr){
+      if(entered && entered !== pr.name){
+        pr.name = entered;
+        renderSidebar();
+        toast('preset renamed to: ' + pr.name, 'ok');
+      }
+    }
+    closeModal('modal-preset-name');
+  }
+}
+
 function renamePreset(i,e){
   if(e)e.stopPropagation();
-  const pr=ST.userPresets[i];
-  if(!pr)return;
-  const currentName=pr.name||'';
-  const newName=prompt('Rename preset:',currentName);
-  if(newName!==null&&newName.trim()&&newName.trim()!==currentName){
-    pr.name=newName.trim();
-    renderSidebar();
-    toast('preset renamed to: '+pr.name,'ok');
-  }
+  openPresetModal('rename', i);
 }
 
 function deletePreset(i,e){
@@ -2839,27 +2898,7 @@ function deletePreset(i,e){
 }
 
 function saveSeqAsPresetPrompt(){
-  if(!ST.seqSteps.length&&!ST.activeKey){
-    toast('add effects to sequence or select an effect first','err');
-    return;
-  }
-  const defaultName = ST.seqSteps.length 
-    ? ST.seqSteps.map(s => (EFX[s.key]?.name || s.key)).slice(0, 3).join(' + ')
-    : (ST.activeKey ? (EFX[ST.activeKey]?.name || ST.activeKey) + ' Preset' : ('Preset ' + new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})));
-    
-  const entered = prompt('Enter preset name:', defaultName);
-  if(entered === null) return; // User pressed Cancel
-  
-  const name = entered.trim() || defaultName;
-  const steps = ST.seqSteps.length
-    ? ST.seqSteps.map(s => ({ key: s.key, p: { ...s.p } }))
-    : [{ key: ST.activeKey, p: { ...ST.activeParams } }];
-    
-  ST.userPresets.push({ name, steps });
-  const tabs = document.querySelectorAll('.sb-tab');
-  if(tabs[1]) setSbTab('presets', tabs[1]);
-  renderSidebar();
-  toast('saved preset: ' + name, 'ok');
+  openPresetModal('save_seq');
 }
 
 // ═══════════════════════ SCRIPT ══════════════════════════════
@@ -3064,8 +3103,21 @@ function riftChosen(input){
 }
 
 // ═══════════════════════ MODAL / TOAST ═══════════════════════
-function openModal(id){document.getElementById(id).classList.add('open');}
-function closeModal(id){document.getElementById(id).classList.remove('open');}
+function openModal(id){
+  const el=document.getElementById(id);
+  if(!el)return;
+  el.style.display='flex';
+  el.offsetHeight;
+  el.classList.add('open');
+}
+function closeModal(id){
+  const el=document.getElementById(id);
+  if(!el)return;
+  el.classList.remove('open');
+  setTimeout(()=>{
+    if(!el.classList.contains('open')) el.style.display='none';
+  }, 190);
+}
 function toast(msg,type='info'){
   const area=document.getElementById('toasts');
   if(!area)return;
@@ -3105,10 +3157,7 @@ function posCanvas(){
   const zd=document.getElementById('zoom-display');if(zd)zd.textContent=pct+'%';
   if(ST.view==='split')updateSplitBarPos();
   if(ST._cropRect)updateCropRect();
-  const p=document.getElementById('zoom-popover');
-  if(p&&p.style.display==='flex'){
-    syncZoomPopUI(pct);
-  }
+
 }
 function cvWheel(e){
   e.preventDefault();
@@ -3135,58 +3184,48 @@ function zoomFit(){
 }
 function zoom100(){VP.zoom=1;VP.panX=0;VP.panY=0;posCanvas();}
 
-const ZOOM_SNAPS=[25,50,75,100,150,200,300,500];
+let _zoomScrubStartY = 0;
+let _zoomScrubStartPct = 100;
+let _isZoomScrubbing = false;
 
-function toggleZoomPop(e){
-  if(e)e.stopPropagation();
-  const p=document.getElementById('zoom-popover');
-  if(!p)return;
-  const isVis=p.style.display==='flex';
-  p.style.display=isVis?'none':'flex';
-  if(!isVis){
-    syncZoomPopUI(Math.round(VP.zoom*100));
+function onZoomDisplayDown(e){
+  if(e.button !== 0) return;
+  e.preventDefault();
+  _zoomScrubStartY = e.clientY;
+  _zoomScrubStartPct = Math.round(VP.zoom * 100);
+  _isZoomScrubbing = true;
+  document.body.style.cursor = 'ns-resize';
+  const zd = document.getElementById('zoom-display');
+  if(zd){
+    zd.style.borderColor = 'var(--acc)';
+    zd.style.color = 'var(--acc2)';
+    zd.style.background = 'var(--dim)';
   }
+  window.addEventListener('mousemove', onZoomDisplayMove);
+  window.addEventListener('mouseup', onZoomDisplayUp);
 }
 
-function closeZoomPop(){
-  const p=document.getElementById('zoom-popover');
-  if(p)p.style.display='none';
+function onZoomDisplayMove(e){
+  if(!_isZoomScrubbing) return;
+  const dy = _zoomScrubStartY - e.clientY;
+  const speed = e.shiftKey ? 0.4 : 1.2;
+  let newPct = Math.round(_zoomScrubStartPct + dy * speed);
+  newPct = Math.max(25, Math.min(500, newPct));
+  setZoomPct(newPct);
 }
 
-function syncZoomPopUI(pct){
-  const pVal=document.getElementById('zoom-pop-val');
-  if(pVal)pVal.textContent=pct+'%';
-  const sl=document.getElementById('zoom-slider');
-  if(sl)sl.value=Math.max(25,Math.min(500,pct));
-  const fill=document.getElementById('zoom-slider-fill');
-  const thumb=document.getElementById('zoom-slider-thumb');
-  const clamped=Math.max(25,Math.min(500,pct));
-  const fillPct=((clamped-25)/(500-25)*100).toFixed(1)+'%';
-  if(fill)fill.style.width=fillPct;
-  if(thumb)thumb.style.left=fillPct;
-  ZOOM_SNAPS.forEach(s=>{
-    const b=document.getElementById('zsnap-'+s);
-    if(b)b.classList.toggle('on',s===pct);
-  });
-}
-
-function onZoomSliderInput(rawVal,e){
-  if(e)e.stopPropagation();
-  let val=parseFloat(rawVal);
-  for(const snap of ZOOM_SNAPS){
-    const threshold=snap>=200?8:4;
-    if(Math.abs(val-snap)<=threshold){
-      val=snap;
-      const sl=document.getElementById('zoom-slider');
-      if(sl)sl.value=snap;
-      break;
-    }
+function onZoomDisplayUp(e){
+  if(!_isZoomScrubbing) return;
+  _isZoomScrubbing = false;
+  document.body.style.cursor = '';
+  const zd = document.getElementById('zoom-display');
+  if(zd){
+    zd.style.borderColor = '';
+    zd.style.color = '';
+    zd.style.background = '';
   }
-  setZoomPct(val);
-}
-
-function applyZoomSnap(val){
-  setZoomPct(val);
+  window.removeEventListener('mousemove', onZoomDisplayMove);
+  window.removeEventListener('mouseup', onZoomDisplayUp);
 }
 
 function setZoomPct(pct){
@@ -4057,8 +4096,7 @@ window.addEventListener('keydown',e=>{
     if(ST._cropRect&&ST._cropRect.w>0)adjCommitCrop();
   } else if(e.key==='Escape'){
     if(ST._cropRect)adjCancelCrop();
-    closeModal('modal-warn');closeModal('modal-fromscript');closeModal('modal-export');
-    closeZoomPop();
+    closeModal('modal-warn');closeModal('modal-fromscript');closeModal('modal-export');closeModal('modal-preset-name');
   }
 });
 
@@ -4079,11 +4117,7 @@ window.addEventListener('mouseup',e=>{
   if(ST._splitDragging||ST._xyDragging||VP.panning||ST._cropDragging)cvMUp(e);
   if(_dragBracket)onBracketUp();
 });
-window.addEventListener('click',e=>{
-  if(!e.target.closest('#zoom-popover')&&!e.target.closest('#zoom-display')){
-    closeZoomPop();
-  }
-});
+
 window.addEventListener('dragstart',e=>{
   if(e.target&&e.target.closest&&e.target.closest('#cvs-area')){
     e.preventDefault();
