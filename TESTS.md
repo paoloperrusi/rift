@@ -124,34 +124,40 @@ RIFT manages four distinct image states:
 
 1. **Crop Tool**:
    - With crop tool active, click and drag diagonally on canvas.
-   - Verify that outer area is shaded and dimensions update live in `#adj-crop-info` and the crop overlay badge.
-   - **Aspect Ratio Locking**:
-     - Set ratio dropdown to `1:1`. Drag diagonally towards canvas boundary: verify crop box is strictly bounded and never extends past image boundaries.
-     - Test `4:3`, `16:9`, `3:2`.
+   - Verify that the crop thumbnail preview in the sidebar (`#adj-crop-prev`) scales cleanly to fit without aspect-ratio stretching.
+   - **Aspect Ratio Locking & Orientation**:
+     - Set ratio dropdown to `16:9`. Drag on canvas to verify locking.
+     - Click `⇄` orientation button: aspect ratio swaps between landscape (16:9) and portrait (9:16) with immediate toast notification and live box adjustment.
+     - Test other ratios (`1:1`, `4:3`, `3:2`, `A4`).
    - **Commit / Cancel**:
-     - Press <kbd>Esc</kbd> or click in-canvas `✕` button: crop rectangle cancels, image untouched.
-     - Drag a new box and press <kbd>Enter</kbd> or click in-canvas `✓` button: image crops to region, dimension inputs update, and tool resets to `select`.
-     - Press <kbd>Ctrl+Z</kbd>: crop undoes back to full canvas.
+     - Press <kbd>Esc</kbd> anywhere (even if inputs are active) or click in-canvas `✕`: crop cancels instantly.
+     - Drag a new box and press <kbd>Enter</kbd> or click in-canvas `✓`: image crops cleanly, and viewport dynamically calls `zoomFit()` to frame the cropped region.
+     - Press <kbd>Ctrl+Z</kbd>: step-by-step undo cleanly restores original image and auto-adapts view scale.
 
-2. **Transform (Rotation & Flip)**:
-   - Switch to `Adjust > geom`.
-   - Click `↺ 90° CCW` and `↻ 90° CW`: canvas rotates 90° and resizes bounding dimensions.
-   - Click `↔ flip H` and `↕ flip V`: canvas mirrors horizontally/vertically.
+2. **Transform (Rotation & Flip in Redesigned Geom Tab)**:
+   - Switch to `Adjust > geom`: verify the sleek, dark-themed layout with dedicated Quick Transform icon buttons and balanced custom angle inputs.
+   - Click `-90°` and `+90°`: rotates 90° and dynamically fits the new bounds in the viewport.
+   - Click `flip H` and `flip V`: canvas mirrors horizontally/vertically.
    - **Custom Angle Rotation**:
-     - Enter `15` into `[ ∠ 15 ° ]`, select `black fill`, and click `↵` (or press Enter): image rotates with black fill corners.
-     - Test `wrap edge` fill mode.
+     - Enter `15` into `[ ∠ 15 ° ]`, select fill mode (`black`, `white`, `wrap edge`), and click `rotate`: image rotates and viewport auto-centers.
 
-3. **Canvas Resizing**:
-   - Locate the inline resize bar: `[ W 800 ] × [ H 600 ] [ ↵ ]`.
-   - Verify `[✓] lock ratio` is checked.
-   - Type `1200` into `W`: verify `H` automatically updates to `900` in real time.
-   - Click `↵`: canvas resamples to 1200×900 and dimension badge updates.
+3. **Canvas Resizing & High-Resolution Scaling**:
+   - In `Adjust > geom`, locate the `Resize Canvas` card showing current size badge (e.g. `800 × 600 px`).
+   - Verify `[✓] lock aspect ratio` is checked.
+   - Enter `1200` into `W`: `H` recalculates automatically.
+   - Click `resize`: canvas resamples, dimensions update, and view dynamically adapts via `zoomFit()`.
+   - Native support for massive images up to 16384×16384 with automatic fit scaling (down to 1% zoom).
 
 ---
 
 ## Batch 4: Effects & Procedural Generators
 
-1. **Effect Selection & Unloading**:
+1. **Dedicated Generators Tab**:
+   - Notice the three top sidebar tabs: `[ effects ] [ generators ] [ presets ]`.
+   - Click `generators`: verify only procedural generators and generator scripts appear.
+   - Click `effects`: verify pure image effects appear without generator clutter.
+
+2. **Effect Selection & Unloading**:
    - Click any effect in the sidebar (e.g. `Scanline Tear`).
    - Effect parameters load into `#pane-params`, row highlights with `.on`, and preview appears on canvas.
    - **Click the same effect row again in the sidebar**:

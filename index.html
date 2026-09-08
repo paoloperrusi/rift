@@ -349,8 +349,9 @@ body.drag-over #cvs-area{outline:2px dashed var(--acc);outline-offset:-6px;}
 <!-- SIDEBAR -->
 <div id="sb">
   <div id="sb-tabs">
-    <div class="sb-tab on" onclick="setSbTab('effects',this)">effects</div>
-    <div class="sb-tab" onclick="setSbTab('presets',this)">presets</div>
+    <div class="sb-tab on" id="sbtab-effects" onclick="setSbTab('effects',this)">effects</div>
+    <div class="sb-tab" id="sbtab-generators" onclick="setSbTab('generators',this)">generators</div>
+    <div class="sb-tab" id="sbtab-presets" onclick="setSbTab('presets',this)">presets</div>
   </div>
 
   <div id="sb-body"></div>
@@ -451,11 +452,11 @@ body.drag-over #cvs-area{outline:2px dashed var(--acc);outline-offset:-6px;}
     <!-- SUBTAB: CROP -->
     <div id="asec-crop" class="adj-sec" style="display:flex;flex-direction:column;gap:8px;">
       <div class="adj-sec-title">crop area</div>
-      <canvas class="adj-crop-prev" id="adj-crop-prev" title="Drag on canvas with crop tool active to define crop region"></canvas>
+      <canvas class="adj-crop-prev" id="adj-crop-prev" width="280" height="158" title="Drag on canvas with crop tool active to define crop region"></canvas>
       <div class="adj-crop-info" id="adj-crop-info">drag on canvas to define crop box</div>
       <div class="adj-row">
         <span class="adj-lbl" title="Aspect ratio constraint">ratio</span>
-        <select class="adj-inp" id="adj-ratio" onchange="adjSetRatio()" title="Constrain crop to this aspect ratio">
+        <select class="adj-inp" id="adj-ratio" onchange="adjSetRatio()" title="Constrain crop to this aspect ratio" style="flex:1;">
           <option value="free">free</option>
           <option value="1">1:1</option>
           <option value="1.333">4:3</option>
@@ -463,6 +464,11 @@ body.drag-over #cvs-area{outline:2px dashed var(--acc);outline-offset:-6px;}
           <option value="1.5">3:2</option>
           <option value="0.707">A4</option>
         </select>
+        <button class="btn sm icon-btn" id="btn-crop-orient" onclick="toggleCropOrientation()" title="Swap aspect ratio orientation (Landscape ⇄ Portrait)" style="width:26px;height:24px;flex-shrink:0;">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M2 5h10M9 2l3 3-3 3M14 11H4M7 14l-3-3 3-3"/>
+          </svg>
+        </button>
       </div>
       <div style="display:flex;gap:4px;margin-top:2px;">
         <button class="btn sm acc" id="btn-do-crop" style="flex:1" onclick="adjCommitCrop()" disabled title="Apply crop (Enter)">✓ commit crop</button>
@@ -471,49 +477,73 @@ body.drag-over #cvs-area{outline:2px dashed var(--acc);outline-offset:-6px;}
     </div>
 
     <!-- SUBTAB: TRANSFORM -->
-    <div id="asec-transform" style="display:none;flex-direction:column;">
-      <div class="adj-sec">
-        <div class="adj-sec-title">rotation &amp; flip</div>
-        <div class="adj-grid2">
-          <div class="adj-btn" onclick="adjRotate(-90)" title="Rotate 90° CCW">↺ 90° CCW</div>
-          <div class="adj-btn" onclick="adjRotate(90)" title="Rotate 90° CW">↻ 90° CW</div>
-          <div class="adj-btn" onclick="adjFlip('h')" title="Flip horizontally">↔ flip H</div>
-          <div class="adj-btn" onclick="adjFlip('v')" title="Flip vertically">↕ flip V</div>
+    <div id="asec-transform" style="display:none;flex-direction:column;gap:10px;padding:10px 12px;">
+      <!-- Quick Transform Section -->
+      <div>
+        <div class="adj-sec-title">Quick Transform</div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-bottom:8px;">
+          <button class="btn sm" onclick="adjRotate(-90)" title="Rotate 90° CCW" style="gap:4px;padding:0;height:26px;">
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 7.5A5.5 5.5 0 1 1 8 13.5M2.5 3.5v4h4"/></svg>
+            <span style="font-size:9.5px;">-90°</span>
+          </button>
+          <button class="btn sm" onclick="adjRotate(90)" title="Rotate 90° CW" style="gap:4px;padding:0;height:26px;">
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 7.5A5.5 5.5 0 1 0 8 13.5M13.5 3.5v4h-4"/></svg>
+            <span style="font-size:9.5px;">+90°</span>
+          </button>
+          <button class="btn sm" onclick="adjFlip('h')" title="Flip Horizontal (Mirror X)" style="gap:4px;padding:0;height:26px;">
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 1.5v13M2 5l4-3v6L2 5zM14 5l-4-3v6l4-3z"/></svg>
+            <span style="font-size:9.5px;">flip H</span>
+          </button>
+          <button class="btn sm" onclick="adjFlip('v')" title="Flip Vertical (Mirror Y)" style="gap:4px;padding:0;height:26px;">
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 8h13M5 2l-3 4h6L5 2zM5 14l-3-4h6l-3 4z"/></svg>
+            <span style="font-size:9.5px;">flip V</span>
+          </button>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:4px;align-items:center;margin-top:6px;">
-          <div style="display:flex;align-items:center;background:var(--bg3);border:1px solid var(--ln2);border-radius:var(--r);padding:0 6px;height:24px;" title="Custom rotation angle in degrees">
-            <span style="font-family:var(--font-mono);font-size:9px;color:var(--t3);margin-right:4px;">∠</span>
+
+        <div class="adj-sec-title">Custom Rotation</div>
+        <div style="display:flex;gap:5px;align-items:center;">
+          <div style="display:flex;align-items:center;background:var(--bg3);border:1px solid var(--ln2);border-radius:var(--r);padding:0 6px;height:26px;width:70px;" title="Custom rotation angle in degrees">
+            <span style="font-family:var(--font-mono);font-size:9px;color:var(--t2);margin-right:2px;">∠</span>
             <input class="adj-inp" id="adj-angle" type="number" value="15" min="-360" max="360" style="border:none;background:transparent;padding:0;height:100%;width:100%;text-align:right;" title="Rotation angle in degrees" onkeydown="if(event.key==='Enter')adjRotateCustom()">
             <span style="font-family:var(--font-mono);font-size:9px;color:var(--t3);margin-left:2px;">°</span>
           </div>
-          <select class="adj-inp" id="adj-fill" title="Fill colour for empty corner areas after rotation" style="height:24px;text-align:left;padding:0 5px;line-height:1;">
+          <select class="adj-inp" id="adj-fill" title="Fill colour for empty corner areas after rotation" style="height:26px;flex:1;text-align:left;padding:0 6px;">
             <option value="black">black fill</option>
             <option value="white">white fill</option>
             <option value="wrap">wrap edge</option>
           </select>
-          <button class="btn sm acc icon-btn" onclick="adjRotateCustom()" title="Apply custom rotation (Enter)" style="height:24px;min-width:26px;">↵</button>
+          <button class="btn sm acc" onclick="adjRotateCustom()" title="Apply custom rotation (Enter)" style="height:26px;padding:0 10px;font-size:10px;">rotate</button>
         </div>
       </div>
+
       <div class="adj-sep"></div>
-      <div class="adj-sec">
-        <div class="adj-sec-title">resize canvas</div>
-        <div style="display:grid;grid-template-columns:1fr auto 1fr auto;align-items:center;gap:4px;margin-bottom:6px;">
-          <div style="display:flex;align-items:center;background:var(--bg3);border:1px solid var(--ln2);border-radius:var(--r);padding:0 6px;height:24px;" title="Target width in pixels">
-            <span style="font-family:var(--font-mono);font-size:9px;color:var(--t3);margin-right:4px;">W</span>
-            <input class="adj-inp" id="adj-rw" type="number" value="800" min="1" max="8192" style="border:none;background:transparent;padding:0;height:100%;width:100%;text-align:right;" title="Width in pixels" oninput="onResizeWInput(this.value)" onkeydown="if(event.key==='Enter')adjResize()">
+
+      <!-- Resize Canvas Section -->
+      <div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
+          <div class="adj-sec-title" style="padding:0;">Resize Canvas</div>
+          <span id="adj-cur-dims" style="font-family:var(--font-mono);font-size:9px;color:var(--acc2);background:var(--dim);padding:1px 6px;border-radius:3px;">800 × 600 px</span>
+        </div>
+        
+        <div style="display:flex;align-items:center;gap:4px;margin-bottom:6px;">
+          <div style="display:flex;align-items:center;background:var(--bg3);border:1px solid var(--ln2);border-radius:var(--r);padding:0 6px;height:26px;flex:1;" title="Target width in pixels">
+            <span style="font-family:var(--font-mono);font-size:9px;color:var(--t2);margin-right:4px;">W</span>
+            <input class="adj-inp" id="adj-rw" type="number" value="800" min="1" max="16384" style="border:none;background:transparent;padding:0;height:100%;width:100%;text-align:right;" title="Width in pixels" oninput="onResizeWInput(this.value)" onkeydown="if(event.key==='Enter')adjResize()">
+            <span style="font-family:var(--font-mono);font-size:9px;color:var(--t3);margin-left:2px;">px</span>
           </div>
           <span style="font-family:var(--font-mono);font-size:10px;color:var(--t3);">×</span>
-          <div style="display:flex;align-items:center;background:var(--bg3);border:1px solid var(--ln2);border-radius:var(--r);padding:0 6px;height:24px;" title="Target height in pixels">
-            <span style="font-family:var(--font-mono);font-size:9px;color:var(--t3);margin-right:4px;">H</span>
-            <input class="adj-inp" id="adj-rh" type="number" value="600" min="1" max="8192" style="border:none;background:transparent;padding:0;height:100%;width:100%;text-align:right;" title="Height in pixels" oninput="onResizeHInput(this.value)" onkeydown="if(event.key==='Enter')adjResize()">
+          <div style="display:flex;align-items:center;background:var(--bg3);border:1px solid var(--ln2);border-radius:var(--r);padding:0 6px;height:26px;flex:1;" title="Target height in pixels">
+            <span style="font-family:var(--font-mono);font-size:9px;color:var(--t2);margin-right:4px;">H</span>
+            <input class="adj-inp" id="adj-rh" type="number" value="600" min="1" max="16384" style="border:none;background:transparent;padding:0;height:100%;width:100%;text-align:right;" title="Height in pixels" oninput="onResizeHInput(this.value)" onkeydown="if(event.key==='Enter')adjResize()">
+            <span style="font-family:var(--font-mono);font-size:9px;color:var(--t3);margin-left:2px;">px</span>
           </div>
-          <button class="btn sm acc icon-btn" onclick="adjResize()" title="Apply canvas resize (Enter)" style="height:24px;min-width:26px;">↵</button>
+          <button class="btn sm acc" onclick="adjResize()" title="Apply canvas resize (Enter)" style="height:26px;padding:0 10px;font-size:10px;">resize</button>
         </div>
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:0 2px;">
-          <label style="font-family:var(--font-mono);font-size:9px;color:var(--t2);display:flex;align-items:center;gap:5px;cursor:pointer;user-select:none" title="Lock aspect ratio when resizing">
-            <input type="checkbox" id="adj-lock" checked> lock ratio
+
+        <div style="display:flex;align-items:center;padding:0 2px;">
+          <label style="font-family:var(--font-mono);font-size:9px;color:var(--t2);display:flex;align-items:center;gap:5px;cursor:pointer;user-select:none;" title="Lock aspect ratio when resizing">
+            <input type="checkbox" id="adj-lock" checked> lock aspect ratio
           </label>
-          <span id="adj-cur-dims" style="font-family:var(--font-mono);font-size:8.5px;color:var(--t3);">800 × 600 px</span>
         </div>
       </div>
     </div>
@@ -809,6 +839,7 @@ function pushHistory(desc='Action'){
 
 function undo(){
   if(ST.historyIndex<=0)return;
+  const oldW=ST.imgW, oldH=ST.imgH;
   ST.historyIndex--;
   const state=ST.history[ST.historyIndex];
   const clone=mkId(state.w,state.h);
@@ -827,10 +858,12 @@ function undo(){
   toast('undo: '+state.desc,'info');
   renderMaskCanvas();
   renderCurrentView();
+  if(oldW!==state.w||oldH!==state.h)zoomFit();
 }
 
 function redo(){
   if(ST.historyIndex>=ST.history.length-1)return;
+  const oldW=ST.imgW, oldH=ST.imgH;
   ST.historyIndex++;
   const state=ST.history[ST.historyIndex];
   const clone=mkId(state.w,state.h);
@@ -849,6 +882,7 @@ function redo(){
   toast('redo: '+state.desc,'info');
   renderMaskCanvas();
   renderCurrentView();
+  if(oldW!==state.w||oldH!==state.h)zoomFit();
 }
 
 function updateHistoryUI(){
@@ -1831,7 +1865,8 @@ function filterSidebar(q){
 }
 
 function renderSidebar(){
-  const body=document.getElementById('sb-body');body.innerHTML='';
+  const body=document.getElementById('sb-body');if(!body)return;
+  body.innerHTML='';
   const q=ST.filterQuery;
   if(ST.sbTab==='effects'){
     const cats=['glitch','distort','corrupt','mirror','pixel','color','art','geometry','3d','fractal'];
@@ -1844,18 +1879,8 @@ function renderSidebar(){
       body.appendChild(catHead(cat,CC[cat],effs.length));
       for(const[key,ef] of effs){body.appendChild(effRow(key,ef,cat));}
     }
-    // generators
-    let gens=Object.entries(GEN);
-    if(q){
-      gens=gens.filter(([k,v])=>v.name.toLowerCase().includes(q)||k.toLowerCase().includes(q)||'generator'.includes(q));
-    }
-    if(gens.length){
-      body.appendChild(catHead('generator',CC.generator,gens.length));
-      for(const[key,gen] of gens){body.appendChild(effRow(key,gen,'generator'));}
-    }
     // user scripts as effects
     const userEffects=ST.userScripts.filter(s=>s.type==='effect');
-    const userGens=ST.userScripts.filter(s=>s.type==='generator');
     if(userEffects.length){
       body.appendChild(catHead('user scripts','#9b9aac',userEffects.length));
       userEffects.forEach((scr,i)=>{
@@ -1864,10 +1889,22 @@ function renderSidebar(){
         row.onclick=()=>selectUserScript(i,'effect');body.appendChild(row);
       });
     }
+  } else if(ST.sbTab==='generators'){
+    // STANDALONE GENERATORS TAB
+    let gens=Object.entries(GEN);
+    if(q){
+      gens=gens.filter(([k,v])=>v.name.toLowerCase().includes(q)||k.toLowerCase().includes(q)||'generator'.includes(q));
+    }
+    if(gens.length){
+      body.appendChild(catHead('procedural generators',CC.generator||'#3dd68c',gens.length));
+      for(const[key,gen] of gens){body.appendChild(effRow(key,gen,'generator'));}
+    }
+    // user scripts as generators
+    const userGens=ST.userScripts.filter(s=>s.type==='generator');
     if(userGens.length){
       body.appendChild(catHead('user generators','#43d98c',userGens.length));
       userGens.forEach((scr,i)=>{
-        const row=document.createElement('div');row.className='erow';
+        const row=document.createElement('div');row.className='erow'+(ST.activeKey===key?' on':'');
         row.innerHTML=`<span class="erow-dot" style="background:#43d98c"></span><span class="erow-name">⬡ ${scr.name}</span>`;
         row.onclick=()=>selectUserScript(i,'generator');body.appendChild(row);
       });
@@ -2348,7 +2385,7 @@ function fileChosen(input){
   const img=new Image(),url=URL.createObjectURL(file);
   img.onerror=()=>{ URL.revokeObjectURL(url); toast('could not load image','err'); };
   img.onload=()=>{
-    const MAX=1600; let w=img.naturalWidth,h=img.naturalHeight;
+    const MAX=16384; let w=img.naturalWidth,h=img.naturalHeight;
     if(w>MAX||h>MAX){const r=Math.min(MAX/w,MAX/h);w=Math.round(w*r);h=Math.round(h*r);}
     const c=document.createElement('canvas');c.width=w;c.height=h;
     c.getContext('2d').drawImage(img,0,0,w,h);
@@ -2868,8 +2905,8 @@ function confirmPresetModal(){
       ? ST.seqSteps.map(s => ({ key: s.key, p: { ...s.p } }))
       : [{ key: ST.activeKey, p: { ...ST.activeParams } }];
     ST.userPresets.push({ name, steps });
-    const tabs = document.querySelectorAll('.sb-tab');
-    if(tabs[1]) setSbTab('presets', tabs[1]);
+    const pTab = document.getElementById('sbtab-presets');
+    if(pTab) setSbTab('presets', pTab);
     renderSidebar();
     closeModal('modal-preset-name');
     toast('saved preset: ' + name, 'ok');
@@ -3193,10 +3230,10 @@ function cvWheel(e){
 }
 function zoomFit(){
   VP.panX=0;VP.panY=0;
-  const cvs=document.getElementById('main-cvs');if(!cvs.width){VP.zoom=1;posCanvas();return;}
+  const cvs=document.getElementById('main-cvs');if(!cvs||!cvs.width){VP.zoom=1;posCanvas();return;}
   const area=document.getElementById('cvs-area');
   const scale=Math.min((area.clientWidth-24)/cvs.width,(area.clientHeight-24)/cvs.height);
-  VP.zoom=Math.max(0.05,scale);posCanvas();
+  VP.zoom=Math.max(0.01,scale);posCanvas();
 }
 function zoom100(){VP.zoom=1;VP.panX=0;VP.panY=0;posCanvas();}
 
@@ -3360,7 +3397,7 @@ function cvMMove(e){
   if(ST._cropDragging&&ST.img){
     const pos=canvasToImage(e);
     let x2=Math.max(0,Math.min(ST.imgW,pos.x)), y2=Math.max(0,Math.min(ST.imgH,pos.y));
-    const ratio=parseFloat(document.getElementById('adj-ratio')?.value||'free');
+    const ratio=adjGetCropRatio();
     if(!isNaN(ratio)&&ratio>0){
       let w2=Math.abs(x2-ST._cropStart.x);
       let h2=w2/ratio;
@@ -3448,16 +3485,72 @@ function updateCropRect(){
   if(btn)btn.disabled=false;
 }
 
+let _cropInverted = false;
+
+function toggleCropOrientation(){
+  _cropInverted = !_cropInverted;
+  const btn = document.getElementById('btn-crop-orient');
+  if(btn) btn.classList.toggle('acc', _cropInverted);
+  const sel = document.getElementById('adj-ratio');
+  const val = sel?.value || 'free';
+  if(val !== 'free' && val !== '1'){
+    toast(_cropInverted ? 'crop orientation: portrait' : 'crop orientation: landscape', 'info');
+  }
+  if(ST._cropRect && ST._cropRect.w > 0 && ST._cropRect.h > 0){
+    const r = adjGetCropRatio();
+    if(r > 0){
+      const cx = ST._cropRect.x + ST._cropRect.w / 2;
+      const cy = ST._cropRect.y + ST._cropRect.h / 2;
+      let newW = ST._cropRect.w;
+      let newH = Math.round(newW / r);
+      if(newH > ST.imgH){
+        newH = ST.imgH;
+        newW = Math.round(newH * r);
+      }
+      if(newW > ST.imgW){
+        newW = ST.imgW;
+        newH = Math.round(newW / r);
+      }
+      const x = Math.max(0, Math.min(ST.imgW - newW, Math.round(cx - newW / 2)));
+      const y = Math.max(0, Math.min(ST.imgH - newH, Math.round(cy - newH / 2)));
+      ST._cropRect = { x, y, w: newW, h: newH };
+      updateCropRect();
+      updateCropPreview();
+    }
+  }
+}
+
+function adjGetCropRatio(){
+  const sel = document.getElementById('adj-ratio');
+  const val = sel?.value || 'free';
+  if(val === 'free') return 0;
+  let r = parseFloat(val);
+  if(isNaN(r) || r <= 0) return 0;
+  if(_cropInverted && r !== 1) r = 1 / r;
+  return r;
+}
+
 function updateCropPreview(){
   if(!ST._cropRect||!ST.img)return;
   const cr=ST._cropRect;
   if(cr.w<2||cr.h<2)return;
   const prev=document.getElementById('adj-crop-prev');if(!prev)return;
+  const pw=prev.width||280, ph=prev.height||158;
   const ctx=prev.getContext('2d');
+  ctx.clearRect(0,0,pw,ph);
+  
   const sc=document.createElement('canvas');sc.width=cr.w||1;sc.height=cr.h||1;
   sc.getContext('2d').putImageData(ST.img,-(cr.x||0),-(cr.y||0));
-  ctx.clearRect(0,0,prev.width,prev.height);
-  ctx.drawImage(sc,0,0,prev.width,prev.height);
+  
+  const scale=Math.min(pw/cr.w, ph/cr.h);
+  const dw=Math.round(cr.w*scale);
+  const dh=Math.round(cr.h*scale);
+  const dx=Math.round((pw-dw)/2);
+  const dy=Math.round((ph-dh)/2);
+  
+  ctx.fillStyle='#0e0e13';
+  ctx.fillRect(0,0,pw,ph);
+  ctx.drawImage(sc,0,0,cr.w,cr.h,dx,dy,dw,dh);
 }
 
 // ─── ADJUST TOOLS ───────────────────────────────────────────
@@ -3484,7 +3577,7 @@ function adjRotate(deg){
   ST.result=ST.img;
   if(document.getElementById('adj-rw'))document.getElementById('adj-rw').value=nw;
   if(document.getElementById('adj-rh'))document.getElementById('adj-rh').value=nh;
-  loadId(ST.img,nw,nh);posCanvas();renderCurrentView();toast('rotated '+deg+'°','ok');
+  loadId(ST.img,nw,nh);zoomFit();renderCurrentView();toast('rotated '+deg+'°','ok');
 }
 
 function adjFlip(axis){
@@ -3545,7 +3638,7 @@ function adjResize(){
   pushHistory('resize '+tw+'×'+th);
   ST.img=ctx.getImageData(0,0,tw,th);ST.imgW=tw;ST.imgH=th;ST.mask=null;
   ST.result=ST.img;
-  loadId(ST.img,tw,th);posCanvas();renderCurrentView();
+  loadId(ST.img,tw,th);zoomFit();renderCurrentView();
   if(document.getElementById('adj-rw'))document.getElementById('adj-rw').value=tw;
   if(document.getElementById('adj-rh'))document.getElementById('adj-rh').value=th;
   toast('resized to '+tw+'×'+th,'ok');
@@ -3570,7 +3663,8 @@ function adjCommitCrop(){
   if(prev){prev.getContext('2d').clearRect(0,0,prev.width,prev.height);}
   if(document.getElementById('adj-rw'))document.getElementById('adj-rw').value=cr.w;
   if(document.getElementById('adj-rh'))document.getElementById('adj-rh').value=cr.h;
-  loadId(ST.img,cr.w,cr.h);posCanvas();
+  loadId(ST.img,cr.w,cr.h);
+  zoomFit();
   setFTool('select');
   renderCurrentView();
   toast('cropped to '+cr.w+'×'+cr.h,'ok');
@@ -4055,6 +4149,14 @@ function exportImg(){
 
 // ═══════════════════════ KEYBOARD SHORTCUTS ══════════════════
 window.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){
+    if(document.activeElement && ['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)){
+      document.activeElement.blur();
+    }
+    adjCancelCrop();
+    closeModal('modal-warn');closeModal('modal-fromscript');closeModal('modal-export');closeModal('modal-preset-name');
+    return;
+  }
   if(['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName))return;
   if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){
     e.preventDefault();
@@ -4085,9 +4187,6 @@ window.addEventListener('keydown',e=>{
     setFTool('crop');
   } else if(e.key==='Enter'){
     if(ST._cropRect&&ST._cropRect.w>0)adjCommitCrop();
-  } else if(e.key==='Escape'){
-    if(ST._cropRect)adjCancelCrop();
-    closeModal('modal-warn');closeModal('modal-fromscript');closeModal('modal-export');closeModal('modal-preset-name');
   }
 });
 
