@@ -86,14 +86,14 @@ RIFT manages four distinct image states:
    - Press <kbd>O</kbd> or click the folder icon: verify standard file picker opens and selected image loads.
 
 3. **Viewport Navigation**:
-   - **Wheel Zoom**: Scroll mouse wheel over image to zoom in/out smoothly toward cursor.
+   - **Wheel Zoom**: Scroll mouse wheel over image to zoom in/out toward cursor, snapping cleanly to multiples of 5 (e.g. 90%, 95%, 100%, 105%, 110%).
    - **Zoom Fit Icon**: Click the fit icon (corners square) or press <kbd>Z</kbd>: image fits neatly within the viewport.
    - **Zoom 100% Icon**: Click the 1:1 icon (circle) or press <kbd>1</kbd>: image snaps to 100% actual pixels.
-   - **Zoom Percentage Chip Scrubbing**:
-     - Hover over `100%` chip: cursor shows vertical resize (`ns-resize`).
-     - Left-click and drag upwards: zoom percentage scrubs upward smoothly up to `500%`, centered on viewport.
-     - Left-click and drag downwards: zoom percentage scrubs downward smoothly down to `25%`.
-     - Hold <kbd>Shift</kbd> while scrubbing: fine-grained precision zoom adjustments.
+   - **Zoom Percentage Chip Controls**:
+     - Scroll mouse wheel directly over `100%` chip: snaps cleanly to multiples of 5 (95%, 100%, 105%, 110%).
+     - Left-click and drag up/right: zoom percentage scrubs upward smoothly up to `500%`, centered on viewport.
+     - Left-click and drag down/left: zoom percentage scrubs downward smoothly down to `25%`.
+     - Hold <kbd>Shift</kbd> while dragging: fine-grained precision zoom adjustments.
      - Middle-click or double-click the percentage chip: zoom immediately snaps to `100%` actual pixels.
    - **Pan Navigation**:
      - Hold <kbd>Spacebar</kbd> and drag: cursor becomes grab hand, canvas moves smoothly.

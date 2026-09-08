@@ -3165,16 +3165,29 @@ function posCanvas(){
 }
 function cvWheel(e){
   e.preventDefault();
-  const factor=e.deltaY<0?1.1:0.9;
+  const cvs=document.getElementById('main-cvs');
+  if(!cvs||!cvs.width)return;
   const area=document.getElementById('cvs-area');
   const rect=area.getBoundingClientRect();
   const mx=e.clientX-rect.left, my=e.clientY-rect.top;
-  const cvs=document.getElementById('main-cvs');
-  if(!cvs.width)return;
   const aw=area.clientWidth, ah=area.clientHeight;
+  
+  const curPct=Math.round(VP.zoom*100);
+  const ticks=Math.abs(e.deltaY)>=100?Math.round(Math.abs(e.deltaY)/100):1;
+  const step=5*Math.max(1,ticks);
+  
+  let newPct;
+  if(e.deltaY<0){
+    newPct=Math.floor(curPct/5)*5+step;
+  }else{
+    newPct=Math.ceil(curPct/5)*5-step;
+  }
+  newPct=Math.max(5,Math.min(2000,newPct));
+  
+  const newZoom=newPct/100;
   const imgX=(mx-(aw-cvs.width*VP.zoom)/2-VP.panX)/VP.zoom;
   const imgY=(my-(ah-cvs.height*VP.zoom)/2-VP.panY)/VP.zoom;
-  VP.zoom=Math.max(0.05,Math.min(40,VP.zoom*factor));
+  VP.zoom=newZoom;
   VP.panX=mx-(aw-cvs.width*VP.zoom)/2-imgX*VP.zoom;
   VP.panY=my-(ah-cvs.height*VP.zoom)/2-imgY*VP.zoom;
   posCanvas();
@@ -3234,12 +3247,17 @@ function onZoomDisplayUp(e){
 function onZoomDisplayWheel(e){
   e.preventDefault();
   e.stopPropagation();
-  const delta = e.deltaY < 0 ? 1 : -1;
-  const step = e.shiftKey ? 2 : 10;
-  const cur = Math.round(VP.zoom * 100);
-  let newPct = cur + delta * step;
-  if(!e.shiftKey) newPct = Math.round(newPct / 5) * 5;
-  newPct = Math.max(25, Math.min(500, newPct));
+  const curPct=Math.round(VP.zoom*100);
+  const ticks=Math.abs(e.deltaY)>=100?Math.round(Math.abs(e.deltaY)/100):1;
+  const step=5*Math.max(1,ticks);
+  
+  let newPct;
+  if(e.deltaY<0){
+    newPct=Math.floor(curPct/5)*5+step;
+  }else{
+    newPct=Math.ceil(curPct/5)*5-step;
+  }
+  newPct=Math.max(25,Math.min(500,newPct));
   setZoomPct(newPct);
 }
 
