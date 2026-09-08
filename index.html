@@ -78,6 +78,9 @@ body{font-family:var(--font-ui);font-size:13px;display:flex;flex-direction:colum
 .prow-name{font-size:12px;color:var(--t1);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .prow.on .prow-name{color:var(--acc2);}
 .prow-tag{font-family:var(--font-mono);font-size:8px;color:var(--t3);background:var(--bg3);padding:1px 4px;border-radius:2px;flex-shrink:0;}
+.prow-ren{opacity:0;color:var(--t3);font-size:10px;transition:opacity var(--ease);cursor:pointer;padding:2px;margin-right:2px;}
+.prow:hover .prow-ren{opacity:1;}
+.prow-ren:hover{color:var(--acc2);}
 .prow-del{opacity:0;color:var(--t3);font-size:10px;transition:opacity var(--ease);cursor:pointer;padding:2px;}
 .prow:hover .prow-del{opacity:1;}
 .prow-del:hover{color:var(--red);}
@@ -374,9 +377,7 @@ body.drag-over #cvs-area{outline:2px dashed var(--acc);outline-offset:-6px;}
     <div class="sb-tab on" onclick="setSbTab('effects',this)">effects</div>
     <div class="sb-tab" onclick="setSbTab('presets',this)">presets</div>
   </div>
-  <div id="sb-search-wrap" style="padding:6px 10px;border-bottom:1px solid var(--ln);flex-shrink:0;">
-    <input id="sb-search" type="text" placeholder="filter effects…" oninput="filterSidebar(this.value)" style="width:100%;height:24px;background:var(--bg3);border:1px solid var(--ln2);border-radius:var(--r);color:var(--t0);font-family:var(--font-mono);font-size:10px;padding:0 7px;outline:none;">
-  </div>
+
   <div id="sb-body"></div>
 </div>
 
@@ -440,7 +441,7 @@ body.drag-over #cvs-area{outline:2px dashed var(--acc);outline-offset:-6px;}
     <div id="seq-add" onclick="seqAdd()" title="Add current effect to sequence">+</div>
     <div style="width:1px;height:18px;background:var(--ln);flex-shrink:0"></div>
     <button class="btn sm icon-btn ghost" onclick="seqRun()" title="Run sequence (▶)">▶</button>
-    <button class="btn sm icon-btn ghost" id="btn-cyc" onclick="seqCycleToggle()" title="Toggle auto-cycle (↻)">↻</button>
+    <button class="btn sm icon-btn ghost" onclick="saveSeqAsPresetPrompt()" title="Save sequence as preset (★)">★</button>
     <button class="btn sm icon-btn ghost" onclick="seqClear()" title="Clear sequence (✕)">✕</button>
   </div>
 </div>
@@ -1879,8 +1880,8 @@ function renderSidebar(){
   } else {
     // PRESETS TAB
     const createBox=document.createElement('div');
-    createBox.style.cssText='padding:8px 10px;border-bottom:1px solid var(--ln);display:flex;gap:4px;background:var(--bg2);';
-    createBox.innerHTML=`<input id="ps-name-sb" type="text" placeholder="new preset name…" style="flex:1;height:24px;background:var(--bg1);border:1px solid var(--ln2);border-radius:var(--r);color:var(--t0);font-family:var(--font-mono);font-size:10px;padding:0 6px;outline:none;" onkeydown="if(event.key==='Enter')saveCurrentAsPreset()"><button class="btn sm acc" onclick="saveCurrentAsPreset()" title="Save current effect/params as preset">+ save</button>`;
+    createBox.style.cssText='padding:8px 8px;border-bottom:1px solid var(--ln);display:flex;gap:4px;align-items:center;background:var(--bg2);';
+    createBox.innerHTML=`<input id="ps-name-sb" type="text" placeholder="preset name…" style="flex:1;min-width:0;height:24px;background:var(--bg1);border:1px solid var(--ln2);border-radius:var(--r);color:var(--t0);font-family:var(--font-mono);font-size:9.5px;padding:0 6px;outline:none;" onkeydown="if(event.key==='Enter')saveCurrentAsPreset()"><button class="btn sm acc" onclick="saveCurrentAsPreset()" title="Save as preset (Enter)" style="height:24px;padding:0 7px;font-size:10px;flex-shrink:0;">+ save</button>`;
     body.appendChild(createBox);
     body.appendChild(catHead('native presets','#a29bfe',Object.keys(NATIVE_PRESETS).length));
     for(const[name,pr] of Object.entries(NATIVE_PRESETS)){
@@ -1894,8 +1895,8 @@ function renderSidebar(){
       body.appendChild(catHead('saved presets','#6c5ce7',ST.userPresets.length));
       ST.userPresets.forEach((pr,i)=>{
         const row=document.createElement('div');row.className='prow';
-        row.innerHTML=`<span class="prow-ico">◈</span><span class="prow-name">${pr.name}</span><span class="prow-tag">${(pr.steps||[]).length}</span><span class="prow-del" onclick="deletePreset(${i},event)">✕</span>`;
-        row.onclick=(e)=>{if(e.target.classList.contains('prow-del'))return;applyPreset(pr);};body.appendChild(row);
+        row.innerHTML=`<span class="prow-ico">◈</span><span class="prow-name" title="${pr.name}">${pr.name}</span><span class="prow-tag">${(pr.steps||[]).length}</span><span class="prow-ren" onclick="renamePreset(${i},event)" title="Rename preset">✎</span><span class="prow-del" onclick="deletePreset(${i},event)" title="Delete preset">✕</span>`;
+        row.onclick=(e)=>{if(e.target.classList.contains('prow-del')||e.target.classList.contains('prow-ren'))return;applyPreset(pr);};body.appendChild(row);
       });
     }
   }
@@ -2413,12 +2414,7 @@ function seqRun(){
   ST.result=cur;loadId(cur,cur.width,cur.height);toast('sequence ran: '+ST.seqSteps.length+' effects','ok');
 }
 function seqClear(){ST.seqSteps=[];renderSeq();}
-let _cycTimer=null;
-function seqCycleToggle(){
-  ST.cycling=!ST.cycling;document.getElementById('btn-cyc').classList.toggle('on',ST.cycling);
-  if(ST.cycling){let i=0;function tick(){if(!ST.cycling)return;const s=ST.seqSteps[i%ST.seqSteps.length];const ef=EFX[s?.key];if(ef&&ST.img){const r=ef.fn(ST.img,s.p);loadId(r,r.width,r.height);}i++;_cycTimer=setTimeout(tick,700);}tick();}
-  else if(_cycTimer){clearTimeout(_cycTimer);}
-}
+// cycle autoshuffle replaced by saveSeqAsPresetPrompt
 
 // ═══════════════════════ MASK ════════════════════════════════
 let _mp=false;
@@ -2806,7 +2802,11 @@ function applyPreset(pr){
 
 function saveCurrentAsPreset(){
   const inp=document.getElementById('ps-name-sb');
-  const name=(inp?.value||'').trim()||('Preset '+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}));
+  const typed=(inp?.value||'').trim();
+  const defaultName = ST.seqSteps.length 
+    ? ST.seqSteps.map(s => (EFX[s.key]?.name || s.key)).slice(0, 3).join(' + ')
+    : (ST.activeKey ? (EFX[ST.activeKey]?.name || ST.activeKey) + ' Preset' : ('Preset ' + new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})));
+  const name = typed || defaultName;
   if(!ST.activeKey&&!ST.seqSteps.length){toast('select an effect or build a sequence first','err');return;}
   const steps=ST.seqSteps.length?ST.seqSteps.map(s=>({key:s.key,p:{...s.p}})):[{key:ST.activeKey,p:{...ST.activeParams}}];
   ST.userPresets.push({name,steps});
@@ -2816,7 +2816,51 @@ function saveCurrentAsPreset(){
 }
 const savePreset=saveCurrentAsPreset;
 
-function deletePreset(i,e){e.stopPropagation();ST.userPresets.splice(i,1);renderSidebar();}
+function renamePreset(i,e){
+  if(e)e.stopPropagation();
+  const pr=ST.userPresets[i];
+  if(!pr)return;
+  const currentName=pr.name||'';
+  const newName=prompt('Rename preset:',currentName);
+  if(newName!==null&&newName.trim()&&newName.trim()!==currentName){
+    pr.name=newName.trim();
+    renderSidebar();
+    toast('preset renamed to: '+pr.name,'ok');
+  }
+}
+
+function deletePreset(i,e){
+  if(e)e.stopPropagation();
+  const pr=ST.userPresets[i];
+  const name=pr?.name||'preset';
+  ST.userPresets.splice(i,1);
+  renderSidebar();
+  toast('deleted preset: '+name,'info');
+}
+
+function saveSeqAsPresetPrompt(){
+  if(!ST.seqSteps.length&&!ST.activeKey){
+    toast('add effects to sequence or select an effect first','err');
+    return;
+  }
+  const defaultName = ST.seqSteps.length 
+    ? ST.seqSteps.map(s => (EFX[s.key]?.name || s.key)).slice(0, 3).join(' + ')
+    : (ST.activeKey ? (EFX[ST.activeKey]?.name || ST.activeKey) + ' Preset' : ('Preset ' + new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})));
+    
+  const entered = prompt('Enter preset name:', defaultName);
+  if(entered === null) return; // User pressed Cancel
+  
+  const name = entered.trim() || defaultName;
+  const steps = ST.seqSteps.length
+    ? ST.seqSteps.map(s => ({ key: s.key, p: { ...s.p } }))
+    : [{ key: ST.activeKey, p: { ...ST.activeParams } }];
+    
+  ST.userPresets.push({ name, steps });
+  const tabs = document.querySelectorAll('.sb-tab');
+  if(tabs[1]) setSbTab('presets', tabs[1]);
+  renderSidebar();
+  toast('saved preset: ' + name, 'ok');
+}
 
 // ═══════════════════════ SCRIPT ══════════════════════════════
 function setSbTab(tab,el){ST.sbTab=tab;document.querySelectorAll('.sb-tab').forEach(t=>t.classList.remove('on'));el.classList.add('on');renderSidebar();}
