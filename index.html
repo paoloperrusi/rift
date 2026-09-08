@@ -332,7 +332,7 @@ body.drag-over #cvs-area{outline:2px dashed var(--acc);outline-offset:-6px;}
       <circle cx="8" cy="8" r="1.5" fill="currentColor"/>
     </svg>
   </button>
-  <span id="zoom-display" class="zoom-display" onmousedown="onZoomDisplayDown(event)" onauxclick="if(event.button===1){event.preventDefault();zoom100();}" ondblclick="zoom100()" title="Drag up/down: zoom (25%–500%) | Middle-click / double-click: 100%">100%</span>
+  <span id="zoom-display" class="zoom-display" onmousedown="onZoomDisplayDown(event)" onwheel="onZoomDisplayWheel(event)" onauxclick="if(event.button===1){event.preventDefault();zoom100();}" ondblclick="zoom100()" title="Drag right/up to zoom in, left/down to zoom out | Scroll wheel | Middle-click: 100%">100%</span>
   <div class="tbr">
     <div style="display:flex;align-items:center;gap:3px;">
       <button class="btn sm icon-btn" id="btn-undo" onclick="undo()" title="Undo (Ctrl+Z)" disabled>↶</button>
@@ -3189,26 +3189,21 @@ function zoomFit(){
 function zoom100(){VP.zoom=1;VP.panX=0;VP.panY=0;posCanvas();}
 
 let _isZoomScrubbing = false;
-let _zoomScrubPct = 100;
-let _lastClientY = null;
+let _zoomScrubStartX = 0;
+let _zoomScrubStartY = 0;
+let _zoomScrubStartPct = 100;
 
 function onZoomDisplayDown(e){
   if(e.button !== 0) return;
   e.preventDefault();
   _isZoomScrubbing = true;
-  _zoomScrubPct = Math.round(VP.zoom * 100);
-  _lastClientY = e.clientY;
+  _zoomScrubStartX = e.clientX;
+  _zoomScrubStartY = e.clientY;
+  _zoomScrubStartPct = Math.round(VP.zoom * 100);
   
   const zd = document.getElementById('zoom-display');
   if(zd) zd.classList.add('scrubbing');
-  
-  const lockTarget = zd || document.body;
-  if(lockTarget.requestPointerLock){
-    try {
-      const p = lockTarget.requestPointerLock();
-      if(p && p.catch) p.catch(()=>{});
-    } catch(err){}
-  }
+  document.body.style.cursor = 'ew-resize';
   
   window.addEventListener('mousemove', onZoomDisplayMove);
   window.addEventListener('mouseup', onZoomDisplayUp);
@@ -3216,47 +3211,37 @@ function onZoomDisplayDown(e){
 
 function onZoomDisplayMove(e){
   if(!_isZoomScrubbing) return;
-  
-  let dy = 0;
-  if(document.pointerLockElement){
-    if(Math.abs(e.movementY) < 300){
-      dy = -e.movementY;
-    }
-  } else {
-    if(_lastClientY !== null){
-      dy = _lastClientY - e.clientY;
-    }
-    _lastClientY = e.clientY;
-  }
-  
-  const speed = e.shiftKey ? 0.3 : 1.2;
-  _zoomScrubPct = Math.max(25, Math.min(500, _zoomScrubPct + dy * speed));
-  setZoomPct(Math.round(_zoomScrubPct));
+  const dy = _zoomScrubStartY - e.clientY;
+  const dx = e.clientX - _zoomScrubStartX;
+  // Dragging right OR up increases zoom; dragging left OR down decreases zoom.
+  const delta = dy + dx;
+  const speed = e.shiftKey ? 0.4 : 1.8;
+  let newPct = Math.round(_zoomScrubStartPct + delta * speed);
+  newPct = Math.max(25, Math.min(500, newPct));
+  setZoomPct(newPct);
 }
 
 function onZoomDisplayUp(e){
   if(!_isZoomScrubbing) return;
   _isZoomScrubbing = false;
-  _lastClientY = null;
-  
+  document.body.style.cursor = '';
   const zd = document.getElementById('zoom-display');
   if(zd) zd.classList.remove('scrubbing');
-  
-  if(document.exitPointerLock && document.pointerLockElement){
-    try {
-      document.exitPointerLock();
-    } catch(err){}
-  }
-  
   window.removeEventListener('mousemove', onZoomDisplayMove);
   window.removeEventListener('mouseup', onZoomDisplayUp);
 }
 
-document.addEventListener('pointerlockchange', ()=>{
-  if(!document.pointerLockElement && _isZoomScrubbing){
-    onZoomDisplayUp();
-  }
-});
+function onZoomDisplayWheel(e){
+  e.preventDefault();
+  e.stopPropagation();
+  const delta = e.deltaY < 0 ? 1 : -1;
+  const step = e.shiftKey ? 2 : 10;
+  const cur = Math.round(VP.zoom * 100);
+  let newPct = cur + delta * step;
+  if(!e.shiftKey) newPct = Math.round(newPct / 5) * 5;
+  newPct = Math.max(25, Math.min(500, newPct));
+  setZoomPct(newPct);
+}
 
 function setZoomPct(pct){
   const newZ=Math.max(0.05,Math.min(40,pct/100));
