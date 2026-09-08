@@ -19,7 +19,7 @@ RIFT manages four distinct image states:
 - **Batch 1: Canvas, Loading, Navigation & Viewport**
   - Clean startup state (no effect pre-selected, placeholder prompt)
   - Image loading: file picker (`O`), drag & drop, `✦ sample` button
-  - Viewport & Zoom: mouse wheel zoom, middle-click reset (100%), Zoom Fit icon, Zoom 100% icon, interactive Zoom percentage vertical scrub (5%–4000%) & middle-click/double-click reset (100%)
+  - Viewport & Zoom: mouse wheel zoom, middle-click reset (100%), Zoom Fit icon, Zoom 100% icon, interactive Zoom percentage mouse wheel scaling (5%–4000%, multiples of 5) & middle-click/double-click reset (100%)
   - View comparison modes: `○ orig` (<kbd>1</kbd>), `● result` (<kbd>2</kbd>), `◐ split` (<kbd>3</kbd>) with draggable divider
 
 - **Batch 2: Floating Toolbar & Adjust Subtabs Synchronization**
@@ -90,11 +90,7 @@ RIFT manages four distinct image states:
    - **Zoom Fit Icon**: Click the fit icon (corners square) or press <kbd>Z</kbd>: image fits neatly within the viewport.
    - **Zoom 100% Icon**: Click the 1:1 icon (circle) or press <kbd>1</kbd>: image snaps to 100% actual pixels.
    - **Zoom Percentage Chip Controls**:
-     - Scroll mouse wheel directly over `100%` chip: snaps cleanly to multiples of 5 (90%, 95%, 100%, 105%, 110% up to 4000%).
-     - Left-click and drag: cursor displays persistent up+down arrow (`↕` / `ns-resize`) with infinite scrolling unbounded by screen edges.
-     - Dragging up: zoom smoothly scales up to `4000%` (snapped to multiples of 5, centered on viewport).
-     - Dragging down: zoom smoothly scales down to `5%`.
-     - Hold <kbd>Shift</kbd> while dragging: fine-grained 1% precision zoom adjustments.
+     - Scroll mouse wheel directly over `100%` chip: snaps cleanly to multiples of 5 (5%–4000%, e.g. 90%, 95%, 100%, 105%, 110%).
      - Middle-click or double-click the percentage chip: zoom immediately snaps to `100%` actual pixels.
    - **Pan Navigation**:
      - Hold <kbd>Spacebar</kbd> and drag: cursor becomes grab hand, canvas moves smoothly.
