@@ -287,6 +287,10 @@ select.adj-inp{cursor:pointer;}
 .res-sel:hover{border-color:var(--ln3);}
 
 
+.zoom-display{font-family:var(--font-mono);font-size:10px;color:var(--t1);background:var(--bg3);border:1px solid var(--ln2);border-radius:var(--r);padding:0 8px;height:24px;display:flex;align-items:center;min-width:48px;justify-content:center;cursor:ns-resize;user-select:none;transition:all var(--ease);}
+.zoom-display:hover{background:var(--bg4);color:var(--t0);border-color:var(--ln3);}
+.zoom-display.scrubbing{background:var(--dim);border-color:var(--acc);color:var(--acc2);box-shadow:0 0 8px rgba(108,92,231,.35);}
+
 .ftool{width:26px;height:26px;background:rgba(14,14,19,.9);border:1px solid var(--ln2);border-radius:var(--r);color:var(--t2);font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all var(--ease);backdrop-filter:blur(4px);}
 .ftool:hover{background:var(--bg4);color:var(--t1);border-color:var(--ln3);}
 .ftool.on, .ftool.active-pan{background:var(--dim);border-color:var(--acc);color:var(--acc2);box-shadow:0 0 8px rgba(108,92,231,.35);}
@@ -328,7 +332,7 @@ body.drag-over #cvs-area{outline:2px dashed var(--acc);outline-offset:-6px;}
       <circle cx="8" cy="8" r="1.5" fill="currentColor"/>
     </svg>
   </button>
-  <span id="zoom-display" style="font-family:var(--font-mono);font-size:10px;color:var(--t1);background:var(--bg3);border:1px solid var(--ln2);border-radius:var(--r);padding:0 8px;height:24px;display:flex;align-items:center;min-width:48px;justify-content:center;cursor:ns-resize;user-select:none;transition:border-color var(--ease),background var(--ease),color var(--ease);" onmousedown="onZoomDisplayDown(event)" onauxclick="if(event.button===1){event.preventDefault();zoom100();}" ondblclick="zoom100()" title="Drag up/down: zoom (25%–500%) | Middle-click / double-click: 100%">100%</span>
+  <span id="zoom-display" class="zoom-display" onmousedown="onZoomDisplayDown(event)" onauxclick="if(event.button===1){event.preventDefault();zoom100();}" ondblclick="zoom100()" title="Drag up/down: zoom (25%–500%) | Middle-click / double-click: 100%">100%</span>
   <div class="tbr">
     <div style="display:flex;align-items:center;gap:3px;">
       <button class="btn sm icon-btn" id="btn-undo" onclick="undo()" title="Undo (Ctrl+Z)" disabled>↶</button>
@@ -3184,49 +3188,75 @@ function zoomFit(){
 }
 function zoom100(){VP.zoom=1;VP.panX=0;VP.panY=0;posCanvas();}
 
-let _zoomScrubStartY = 0;
-let _zoomScrubStartPct = 100;
 let _isZoomScrubbing = false;
+let _zoomScrubPct = 100;
+let _lastClientY = null;
 
 function onZoomDisplayDown(e){
   if(e.button !== 0) return;
   e.preventDefault();
-  _zoomScrubStartY = e.clientY;
-  _zoomScrubStartPct = Math.round(VP.zoom * 100);
   _isZoomScrubbing = true;
-  document.body.style.cursor = 'ns-resize';
+  _zoomScrubPct = Math.round(VP.zoom * 100);
+  _lastClientY = e.clientY;
+  
   const zd = document.getElementById('zoom-display');
-  if(zd){
-    zd.style.borderColor = 'var(--acc)';
-    zd.style.color = 'var(--acc2)';
-    zd.style.background = 'var(--dim)';
+  if(zd) zd.classList.add('scrubbing');
+  
+  const lockTarget = zd || document.body;
+  if(lockTarget.requestPointerLock){
+    try {
+      const p = lockTarget.requestPointerLock();
+      if(p && p.catch) p.catch(()=>{});
+    } catch(err){}
   }
+  
   window.addEventListener('mousemove', onZoomDisplayMove);
   window.addEventListener('mouseup', onZoomDisplayUp);
 }
 
 function onZoomDisplayMove(e){
   if(!_isZoomScrubbing) return;
-  const dy = _zoomScrubStartY - e.clientY;
-  const speed = e.shiftKey ? 0.4 : 1.2;
-  let newPct = Math.round(_zoomScrubStartPct + dy * speed);
-  newPct = Math.max(25, Math.min(500, newPct));
-  setZoomPct(newPct);
+  
+  let dy = 0;
+  if(document.pointerLockElement){
+    if(Math.abs(e.movementY) < 300){
+      dy = -e.movementY;
+    }
+  } else {
+    if(_lastClientY !== null){
+      dy = _lastClientY - e.clientY;
+    }
+    _lastClientY = e.clientY;
+  }
+  
+  const speed = e.shiftKey ? 0.3 : 1.2;
+  _zoomScrubPct = Math.max(25, Math.min(500, _zoomScrubPct + dy * speed));
+  setZoomPct(Math.round(_zoomScrubPct));
 }
 
 function onZoomDisplayUp(e){
   if(!_isZoomScrubbing) return;
   _isZoomScrubbing = false;
-  document.body.style.cursor = '';
+  _lastClientY = null;
+  
   const zd = document.getElementById('zoom-display');
-  if(zd){
-    zd.style.borderColor = '';
-    zd.style.color = '';
-    zd.style.background = '';
+  if(zd) zd.classList.remove('scrubbing');
+  
+  if(document.exitPointerLock && document.pointerLockElement){
+    try {
+      document.exitPointerLock();
+    } catch(err){}
   }
+  
   window.removeEventListener('mousemove', onZoomDisplayMove);
   window.removeEventListener('mouseup', onZoomDisplayUp);
 }
+
+document.addEventListener('pointerlockchange', ()=>{
+  if(!document.pointerLockElement && _isZoomScrubbing){
+    onZoomDisplayUp();
+  }
+});
 
 function setZoomPct(pct){
   const newZ=Math.max(0.05,Math.min(40,pct/100));
